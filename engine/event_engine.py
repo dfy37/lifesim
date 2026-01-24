@@ -193,7 +193,7 @@ class POI_Event:
         return sep.join(infos)
 
 class OnlineLifeEventEngine:
-    def __init__(self, event_sequences_path, model, retriever):
+    def __init__(self, event_sequences_path, model=None, retriever=None):
         self.events = load_jsonl_data(event_sequences_path)
         self.uid2events = {event['user_id']: event for event in self.events}
         self.id2events = {event['id']: event for event in self.events}
@@ -250,11 +250,18 @@ class OnlineLifeEventEngine:
         
         event_texts = []
         for i, res in enumerate(event_results):
-            event = res['selected_event']['event']
-            intent = res['selected_event']['intent']
-            time = res['trajectory_point']['time']
-            location = res['trajectory_point']['location']
-            weather = res['trajectory_point']['weather']
+            if 'selected_event' in res and 'trajectory_point' in res:
+                event = res['selected_event']['event']
+                intent = res['selected_event'].get('intent', '')
+                time = res['trajectory_point'].get('time')
+                location = res['trajectory_point'].get('location')
+                weather = res['trajectory_point'].get('weather')
+            else:
+                event = res.get('life_event') or res.get('event')
+                intent = res.get('intent', '')
+                time = res.get('time')
+                location = res.get('location')
+                weather = res.get('weather')
             formatted_event = POI_Event.from_dict({
                 'time': time,
                 'location': location,
@@ -267,12 +274,13 @@ class OnlineLifeEventEngine:
         
         return "\n".join(event_texts)
     
-    def generate_query_by_dimension(self, user_profile: str, event_context: str, location_desc: str, dimension: str) -> str:
+    def generate_query_by_dimension(self, user_profile: str, event_context: str, location_desc: str, dimension: str, goal: str) -> str:
         dimension_prompt = self.event_dimensions.get(dimension, None)
         prompt = dimension_prompt.format(
             user_profile=user_profile,
             location_desc=location_desc,
             event_sequences=event_context,
+            goal=goal
         )
         response = self.model.chat([{'role': 'user', 'content': prompt}])
         response = parse_json_dict_response(response, keys=['event']).get('event', None)
@@ -284,9 +292,130 @@ class OnlineLifeEventEngine:
         similar_events = self.retriever.search(query=query, top_k=top_k)
         similar_events = [e['data'] for e in similar_events]
         return similar_events
+    
+    def rerank_events(self, events: List[Dict], user_profile: str,
+                     location_desc: str, event_context: str, goal: str, n_keep: int = 3) -> List[Dict]:
+        events_text = "\n".join([f"({i+1}) {event['event']}" for i, event in enumerate(events)])
 
-    def generate_event(self, user_profile, user_belief = '', history_events = []):
-        pre_events = [x['event'] for x in history_events]
+        prompt = RERANK_PROMPT.format(
+            user_profile=user_profile,
+            location_desc=location_desc,
+            event_sequences=event_context,
+            events_text=events_text,
+            goal=goal
+        )
+
+        response = self.model.chat([{'role': 'user', 'content': prompt}])
+        response = parse_json_dict_response(response, keys=['ranked_events', 'has_possible_event'])
+        try:
+            has_possible_event = response.get('has_possible_event', 'false')
+            if isinstance(has_possible_event, str):
+                has_possible_event = has_possible_event.lower() == 'true'
+            elif not isinstance(has_possible_event, bool):
+                has_possible_event = False
+            if not has_possible_event:
+                return []
+            rank_indices = response.get('ranked_events', [])
+            rank_indices = [int(i) - 1 for i in rank_indices]
+            reranked_events = [events[i] for i in rank_indices if 0 <= i < len(events)]
+            return reranked_events[:n_keep]
+        except:
+            return []
+
+    def softmax_sampling(self, events: List[Dict]) -> Dict:
+        if not events:
+            return None
+
+        ranks = np.arange(1, len(events) + 1)
+        inverse_ranks = - ranks
+
+        probabilities = np.exp(inverse_ranks) / np.sum(np.exp(inverse_ranks))
+
+        selected_idx = np.random.choice(len(events), p=probabilities)
+        return events[selected_idx]
+
+    def rewrite_event(self, user_profile: str, location_desc: str, event_context: str, selected_event: dict, goal: str):
+        prompt = REWRITE_PROMPT.format(
+            user_profile=user_profile,
+            location_desc=location_desc,
+            event_sequences=event_context,
+            event_text=selected_event['event'],
+            intent=selected_event.get('intent', ''),
+            goal=goal
+        )
+
+        response = self.model.chat([{'role': 'user', 'content': prompt}])
+        response = parse_json_dict_response(response, keys=['event', 'intent'])
+
+        if response.get('event', None):
+            selected_event['event'] = response['event']
+        if response.get('intent', None):
+            selected_event['intent'] = response['intent']
+
+        return selected_event
+
+    def generate_event(self, user_profile: str = None, history_events: List[Dict] = None, goal: str = ''):
+        event = self.main_events['events'][self.event_index]
+        formatted_event = POI_Event.from_dict(event, timezone=None)
+        event['dialogue_scene'] = '\n'.join([formatted_event.desc_time(), formatted_event.desc_location(), formatted_event.desc_weather()])
+        self.event_index += 1
+
+        if not self.model or not self.retriever or not user_profile:
+            if not event.get('life_event'):
+                event['life_event'] = event.get('event')
+            return event
+
+        event_context = self.get_event_context(history_events or [])
+        location_desc = formatted_event.desc(keys_to_drop=['life_event', 'intent'])
+        goal = goal or self.longterm_goal
+
+        dimensions = list(self.event_dimensions.keys())
+        all_candidate_events = []
+        for dimension in dimensions:
+            query = self.generate_query_by_dimension(
+                user_profile,
+                event_context,
+                location_desc,
+                dimension,
+                goal=goal
+            )
+
+            similar_events = self.retrieve_similar_events(query, top_k=3)
+            all_candidate_events.extend(similar_events)
+
+        reranked_events = self.rerank_events(
+            all_candidate_events,
+            user_profile=user_profile,
+            location_desc=location_desc,
+            event_context=event_context,
+            goal=goal,
+            n_keep=3
+        )
+
+        selected_event = self.softmax_sampling(reranked_events)
+        if selected_event:
+            selected_event = self.rewrite_event(
+                user_profile=user_profile,
+                location_desc=location_desc,
+                event_context=event_context,
+                selected_event=selected_event,
+                goal=goal
+            )
+
+            event['event'] = selected_event.get('event', event.get('event'))
+            event['life_event'] = selected_event.get('event', event.get('life_event'))
+            event['intent'] = selected_event.get('intent', event.get('intent'))
+            event['sub_intents'] = selected_event.get('sub_intents', event.get('sub_intents', []))
+            event['candidate_events'] = all_candidate_events
+            event['selected_event'] = selected_event
+        else:
+            if not event.get('life_event'):
+                event['life_event'] = event.get('event')
+
+        return event
+
+    # def generate_event(self, user_profile, user_belief = '', history_events = []):
+    #     pre_events = [x['event'] for x in history_events]
         
         environment = self.generate_environment()
         

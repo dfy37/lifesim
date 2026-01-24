@@ -12,6 +12,10 @@ import streamlit.components.v1 as components
 from run_simulation import build_simulator
 from streamlit_timeline import timeline
 from engine.event_engine import OnlineLifeEventEngine
+from models import load_model
+from tools.dense_retriever import DenseRetriever
+from agents.user_agent import UserAgent
+from profiles.profile_generator import UserProfile
 
 logger = get_logger(__name__)
 
@@ -334,6 +338,28 @@ def create_layout():
     
     return next_button, main_area, map_area, timeline_area
 
+def build_retriever_config(name, idx, retriever_cfg):
+    return {
+        "model_name": retriever_cfg["embedding_model_path"],
+        "collection_name": f"{name}_{idx}",
+        "max_length": retriever_cfg["max_length"],
+        "embedding_dim": retriever_cfg["embedding_dim"],
+        "persist_directory": retriever_cfg["persist_directory"],
+        "device": retriever_cfg["device"],
+        "logger_silent": retriever_cfg.get("logger_silent", False)
+    }
+
+EVENT_POOL_PATH = {
+    'elderlycare': '/remote-home/fyduan/data_crawl/event_pool/elderlycare_intent/event_pool/elderlycare_event_with_keywords.jsonl',
+    'sport_health': '/remote-home/fyduan/data_crawl/event_pool/sport_health_intent/event_pool/sport_health_events_v2.jsonl',
+    'travel': '/remote-home/fyduan/data_crawl/event_pool/travel_intent/event_pool/travel_events_v2.jsonl',
+    'mental_health': '/remote-home/fyduan/data_crawl/event_pool/mental_health_intent/event_pool/mental_health_event.jsonl',
+    'education': '/remote-home/fyduan/data_crawl/event_pool/education_intent/event_pool/education_events_v2.jsonl',
+    'childcare': '/remote-home/fyduan/data_crawl/event_pool/childcare_intent/event_pool/childcare_events_v2.jsonl',
+    'dining': '/remote-home/fyduan/data_crawl/event_pool/dining_intent/event_pool/dining_events_v2.jsonl',
+    'entertainment': '/remote-home/fyduan/data_crawl/event_pool/entertainment_intent/event_pool/entertainment_event_with_keywords.jsonl'
+}
+
 def render_chat_page():
     # 加载配置
     cfg = load_config('./config.yaml')
@@ -367,9 +393,61 @@ def render_chat_page():
         seqid2eseq=seqid2eseq,
         uid2user=uid2user
     )
+
+    profile = uid2user[seqid2uid[sequence_id]]
+    profile_str = str(UserProfile.from_dict(profile))
+
+    # MODEL PATHS
+    user_m_cfg = cfg["models"]["user_model"]
+    user_model_name = os.path.basename(user_m_cfg["model_path"])
+    event_model = load_model(
+        model_name=user_model_name,
+        api_key=user_m_cfg["api_key"],
+        model_path=user_m_cfg["model_path"],
+        base_url=user_m_cfg["base_url"],
+        vllmapi=user_m_cfg["vllmapi"],
+        reason=False,
+    )
+
+    user_model = load_model(
+        model_name=user_model_name,
+        api_key=user_m_cfg["api_key"],
+        model_path=user_m_cfg["model_path"],
+        base_url=user_m_cfg["base_url"],
+        vllmapi=user_m_cfg["vllmapi"],
+        reason=False,
+    )
+
+    theme = '_'.join(sequence_id.split('NYC_')[-1].split('TKY_')[-1].split('_')[:-1])
+    event_retriever = DenseRetriever(
+        model_name="/remote-home/share/fyduan_share/MODELS/Qwen3-Embedding-0.6B",
+        collection_name=f"trajectory_{theme}_event_collection",
+        embedding_dim=1024,
+        persist_directory="./chroma_db",
+        distance_function="cosine",
+        use_custom_embeddings=False,
+        device='cpu'
+    )
+    event_database = load_jsonl_data(EVENT_POOL_PATH[theme])
+    if event_retriever.is_collection_empty():
+        logger.info("Collection is empty, building index...")
+        event_retriever.build_index(event_database, text_field="event", id_field="id", batch_size=128)
     
-    event_engine = OnlineLifeEventEngine(cfg["paths"]["events_path"])
+    retriever_cfg = cfg["simulator"]["user_retriever"]
+    user_retriever_cfg = build_retriever_config(
+        f"user_memory", 0, retriever_cfg
+    )
+    user_agent = UserAgent(
+        model=user_model,
+        retriever_config=user_retriever_cfg,
+        profile=profile_str,
+        alpha=cfg["simulator"]["alpha"]
+    )
+
+    event_engine = OnlineLifeEventEngine(cfg["paths"]["events_path"], model=event_model, retriever=event_retriever)
     event_engine.set_event_sequence(sequence_id)
+    user_id = seqid2uid[sequence_id]
+    user_profile = uid2user[user_id]
 
     event_engine.set_event_index(st.session_state.event_counter)
     if len(st.session_state.timeline_events) > 0:
@@ -394,7 +472,7 @@ def render_chat_page():
     if next_button:
         # clear_state()
         event_engine.set_event_index(st.session_state.event_counter)
-        event = event_engine.generate_event()
+        event = event_engine.generate_event(user_profile=profile_str, history_events=st.session_state.timeline_events)
         map_render.render(lat=event['location_detail']['latitude'], lon=event['location_detail']['longitude'])
         timeline_render.render(event)
         main_area_render.render({'step': 'init', 'event': event, 'event_index': st.session_state.event_counter})
