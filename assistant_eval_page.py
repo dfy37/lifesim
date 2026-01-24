@@ -266,6 +266,10 @@ class MainAreaRender:
             )
 
 def render_sidebar_selection(sequence_ids):
+    return_button = st.sidebar.button("返回主页", on_click=clear_state)
+    if return_button:
+        st.session_state["page"] = "home"
+    
     """渲染侧边栏选择区域"""
     sequence_id = st.sidebar.selectbox(
         "请选择要模拟的用户ID: ",
@@ -485,7 +489,7 @@ def run_simulation(main_area_render, map_render, timeline_render, sequence_id, n
         n_rounds=n_rounds, 
         **sim_config
     )
-    sim.save(path=os.path.join('./logs', f'{exp_name}'))
+    sim.save(path=os.path.join('/remote-home/fyduan/exp_data/logs', f'{exp_name}'))
 
     st.session_state["simulator_running"] = False
     st.session_state["last_update"] = time.time()
@@ -541,7 +545,7 @@ def render_assistant_eval_page():
     )
 
     if start_button:
-        # clear_state()
+        clear_state()
 
         n_exp = 0
         run_simulation(

@@ -199,6 +199,7 @@ class OnlineLifeEventEngine:
         self.id2events = {event['id']: event for event in self.events}
         self.model = model
         self.retriever = retriever
+        self.logger = get_logger(__name__, silent=False)
     
     def set_event_sequence(self, sequence_id: str):
         self.event_index = 0
@@ -284,6 +285,7 @@ class OnlineLifeEventEngine:
         )
         response = self.model.chat([{'role': 'user', 'content': prompt}])
         response = parse_json_dict_response(response, keys=['event']).get('event', None)
+        self.logger.info(f"Generated query for dimension {dimension}: {response}")
         return response
 
     def retrieve_similar_events(self, query: str, top_k: int = 3) -> List[Dict]:
@@ -307,6 +309,7 @@ class OnlineLifeEventEngine:
 
         response = self.model.chat([{'role': 'user', 'content': prompt}])
         response = parse_json_dict_response(response, keys=['ranked_events', 'has_possible_event'])
+        self.logger.info(f"Rerank response: {response}")
         try:
             has_possible_event = response.get('has_possible_event', 'false')
             if isinstance(has_possible_event, str):
@@ -346,6 +349,8 @@ class OnlineLifeEventEngine:
 
         response = self.model.chat([{'role': 'user', 'content': prompt}])
         response = parse_json_dict_response(response, keys=['event', 'intent'])
+        self.logger.info(f"Rewritten event: {response.get('event', '')}")
+        self.logger.info(f"Rewritten intent: {response.get('intent', '')}")
 
         if response.get('event', None):
             selected_event['event'] = response['event']
@@ -372,6 +377,7 @@ class OnlineLifeEventEngine:
         dimensions = list(self.event_dimensions.keys())
         all_candidate_events = []
         for dimension in dimensions:
+            self.logger.info(f"Generating query for dimension: {dimension}")
             query = self.generate_query_by_dimension(
                 user_profile,
                 event_context,
@@ -383,6 +389,7 @@ class OnlineLifeEventEngine:
             similar_events = self.retrieve_similar_events(query, top_k=3)
             all_candidate_events.extend(similar_events)
 
+        self.logger.info(f"Total candidate events: {len(all_candidate_events)}")
         reranked_events = self.rerank_events(
             all_candidate_events,
             user_profile=user_profile,
@@ -394,6 +401,7 @@ class OnlineLifeEventEngine:
 
         selected_event = self.softmax_sampling(reranked_events)
         if selected_event:
+            self.logger.info(f"Selected event: {selected_event.get('event', '')}")  
             selected_event = self.rewrite_event(
                 user_profile=user_profile,
                 location_desc=location_desc,
@@ -406,59 +414,10 @@ class OnlineLifeEventEngine:
             event['life_event'] = selected_event.get('event', event.get('life_event'))
             event['intent'] = selected_event.get('intent', event.get('intent'))
             event['sub_intents'] = selected_event.get('sub_intents', event.get('sub_intents', []))
-            event['candidate_events'] = all_candidate_events
-            event['selected_event'] = selected_event
         else:
             if not event.get('life_event'):
                 event['life_event'] = event.get('event')
 
-        return event
-
-    # def generate_event(self, user_profile, user_belief = '', history_events = []):
-    #     pre_events = [x['event'] for x in history_events]
-        
-        environment = self.generate_environment()
-        
-        dimensions = list(self.event_dimensions.keys())
-        all_candidate_events = []
-        event_context = self.get_event_context(history_events)
-        for dimension in dimensions:
-            query = self.generate_query_by_dimension(
-                user_profile,
-                event_context, 
-                environment,
-                dimension,
-            )
-            
-            similar_events = self.retrieve_similar_events(query, top_k=3)
-            all_candidate_events.extend(similar_events)
-                
-            if all_candidate_events:
-                all_candidate_events = [x for x in all_candidate_events if x['event'] not in pre_events]
-
-                reranked_events = self.rerank_events(
-                    all_candidate_events,
-                    user_profile=user_profile,
-                    location_desc=location_point.desc(keys_to_drop=['life_event', 'intent']),
-                    event_context=event_context,
-                    goal=goal,
-                    n_keep=1
-                )
-                
-                selected_event = self.softmax_sampling(reranked_events)
-                
-                if selected_event:
-                    pre_locations.add(location_point.location)
-                    pre_events.add(selected_event['event'])
-
-                    selected_event = self.rewrite_event(
-                        user_profile=user_profile, 
-                        location_desc=location_point.desc(keys_to_drop=['life_event', 'intent']),
-                        event_context=event_context, 
-                        selected_event=selected_event,
-                        goal=goal
-                    )
-        
         return event
 
 class TrajectoryEventMatcher:

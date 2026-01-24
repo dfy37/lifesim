@@ -215,8 +215,11 @@ class UserAgent:
             self.logger.error(f"Action selection error: {e}")
             return self.action_space.CONTINUE
 
+    def set_messages(self, messages: List[dict]):
+        self.messages = messages
+
     def respond(self, prompt: str, use_emotion_chain: bool = False, use_dynamic_memory: bool = False) -> dict:      
-        memory_perception = '',
+        memory_perception = ''
         S = -1 
         if use_dynamic_memory and len(prompt) > 0:
             memory_perception, S = self._process_dynamic_memory(prompt)
@@ -250,6 +253,12 @@ class UserAgent:
         
         if len(self.messages) < 1:
             self.messages.append({
+                'role': 'system',
+                'content': self.system_prompt
+            })
+
+        if self.messages[0]['role'] != 'system':
+            self.messages.insert(0, {
                 'role': 'system',
                 'content': self.system_prompt
             })

@@ -11,7 +11,7 @@ class DeepSeek:
     def chat(self, messages):
         try:
             response = self.client.chat.completions.create(
-                model="deepseek-reasoner",
+                model="deepseek-chat",
                 messages=messages,
                 temperature=1.0
             )
