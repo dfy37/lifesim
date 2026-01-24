@@ -1,0 +1,362 @@
+[
+  {
+    "dimension": "Preference for a certain food",
+    "id": 7,
+    "template": {
+      "high": "Very particular about food choices, having strong preferences or aversions to certain foods, actively seeking out or avoiding specific ingredients, with a highly specialized diet.",
+      "middle": "Has general food preferences but remains flexible—usually chooses favorite foods yet is open to other options and willing to try new flavors.",
+      "low": "Has almost no specific food preferences, with dietary choices being flexible and inclusive, emphasizing convenience over personal taste preferences."
+    }
+  },
+  {
+    "dimension": "Preference for a certain living environment",
+    "id": 8,
+    "template": {
+      "high": "Have very high requirements for the living environment, paying attention to location, surrounding facilities, quietness, and comfort, and will spend a lot of effort screening and creating an ideal home.",
+      "middle": "Has basic requirements for the living environment but possesses a certain degree of adaptability, accepting options as long as they meet the main needs without obvious flaws.",
+      "low": "Has almost no specific requirements for living environments, can quickly adapt to various living conditions, and focuses more on other aspects of life rather than the living environment."
+    }
+  },
+  {
+    "dimension": "Sleep preference",
+    "id": 9,
+    "template": {
+      "high": "Has very high requirements for the sleep environment, paying attention to quietness, darkness, temperature, and bedding comfort, has fixed sleep habits, and finds it difficult to adapt to less-than-ideal sleep conditions.",
+      "middle": "Has certain sleep preferences but possesses good adaptability, able to rest in most environments, and can adjust sleep habits if necessary.",
+      "low": "There are almost no specific requirements for sleep conditions; one is able to fall asleep anytime and anywhere, and is not sensitive to changes in the external environment or their own daily schedule."
+    }
+  },
+  {
+    "dimension": "Investment preference",
+    "id": 10,
+    "template": {
+      "high": "Possesses clear investment inclinations and style preferences, has strong preferences for specific asset classes or investment strategies, adheres firmly to established investment plans, and is less affected by market fluctuations in decision-making.",
+      "middle": "Has certain investment preferences but remains flexible—while adhering to the main investment direction, it can appropriately adjust strategies and accept moderate risk exposure and diversified allocation.",
+      "low": "There are hardly any specific investment preferences, with investment decisions being highly adaptable to changing market conditions, maintaining an open attitude toward various asset classes and investment strategies."
+    }
+  },
+  {
+    "dimension": "Saving preference",
+    "id": 11,
+    "template": {
+      "high": "Have a strong tendency to save, focus on financial planning and future security, actively control expenses, and prioritize building up financial reserves.",
+      "middle": "Has certain saving habits but seeks a balance between saving and consumption, considering both future needs and current quality of life.",
+      "low": "There is no special need for saving; more emphasis is placed on immediate consumption and experiences, with financial arrangements primarily oriented toward current needs."
+    }
+  },
+  {
+    "dimension": "Importance placed on physical safety",
+    "id": 12,
+    "template": {
+      "high": "Places extreme importance on personal safety, remains highly vigilant about potential dangers, and proactively takes various protective measures to avoid any safety risks.",
+      "middle": "Has a strong focus on personal safety but does not overreact, takes basic protective measures, and can accept certain risks in controllable environments.",
+      "low": "Less concerned about personal safety, rarely actively considers risk factors, has strong adaptability to risky environments, and is not easily troubled."
+    }
+  },
+  {
+    "dimension": "Importance placed on environmental safety",
+    "id": 13,
+    "template": {
+      "high": "Places extreme emphasis on environmental safety, is highly sensitive to potential risks, and will proactively avoid dangerous areas or take protective measures, prioritizing safety as the primary consideration.",
+      "middle": "Has a strong focus on environmental safety but does not overreact, takes basic protective measures, and can accept certain risks in controllable environments.",
+      "low": "Not very concerned about environmental safety issues, rarely actively assess risks, lack sensitivity to potential dangers, and have strong adaptability."
+    }
+  },
+  {
+    "dimension": "Preference for the depth of interaction",
+    "id": 14,
+    "template": {
+      "high": "Places great emphasis on the depth of interaction, seeks meaningful and in-depth communication, tends to build deep emotional connections and intellectual resonance, and avoids shallow, superficial interactions.",
+      "middle": "Able to adapt to different depths of interaction, enjoying in-depth communication while also accepting light socializing, naturally adjusting the level of interaction according to the context.",
+      "low": "No special requirements for the depth of interaction, content with daily superficial communication, and will not deliberately pursue deep emotional or intellectual communication."
+    }
+  },
+  {
+    "dimension": "Approach to handling conflict",
+    "id": 15,
+    "template": {
+      "high": "Tends to actively face and resolve conflicts, express one's position proactively, and seek direct communication and thorough problem-solving.",
+      "middle": "Takes a balanced approach to conflict, choosing responses based on the situation, and may engage in proactive communication or temporarily avoid it.",
+      "low": "A habitual tendency to avoid or downplay conflicts, preferring to maintain harmony and avoiding direct confrontation and intense discussions."
+    }
+  },
+  {
+    "dimension": "Communication style in social settings: more concise or detailed",
+    "id": 16,
+    "template": {
+      "high": "Highly inclined towards concise communication in social settings, with a habit of using succinct language to express key points, avoiding lengthy details, and emphasizing efficiency and directness.",
+      "middle": "Able to adjust communication style flexibly in social settings—can summarize key points concisely or elaborate when appropriate, maintaining a balance between efficiency and completeness.",
+      "low": "A strong preference for detailed communication in social contexts, with a habit of providing rich background information and specific details, prioritizing comprehensive explanation over concise expression."
+    }
+  },
+  {
+    "dimension": "Need for a certain work environment",
+    "id": 17,
+    "template": {
+      "high": "Has very high requirements for the work environment, paying attention to details such as spatial layout, facilities, and atmosphere culture, and will actively choose or create a workplace that perfectly meets expectations.",
+      "middle": "Has certain preferences for the work environment but possesses strong adaptability, able to find a balance between ideal conditions and reality.",
+      "low": "There are almost no special requirements for the work environment; able to quickly adapt to various office conditions, paying more attention to the work content itself rather than the external environment."
+    }
+  },
+  {
+    "dimension": "Need for recognition from others",
+    "id": 18,
+    "template": {
+      "high": "Strongly desires recognition and praise from others, uses external evaluations as an important standard for self-worth, and actively seeks attention and affirmation.",
+      "middle": "Cares about others' evaluations but does not overly rely on them, hopes to gain recognition while also accepting situations where they are not the focus, maintaining a relatively balanced mindset.",
+      "low": "Cares little about external recognition; a sense of self-worth primarily comes from internal standards and does not deliberately seek approval from others."
+    }
+  },
+  {
+    "dimension": "Need for personal achievement",
+    "id": 19,
+    "template": {
+      "high": "Highly driven to achieve personal accomplishments, setting clear goals and persistently working towards them, with a strong desire to gain recognition and achieve self-fulfillment through achievements.",
+      "middle": "Values personal achievements but maintains moderate expectations, works hard to achieve goals without being overly demanding, and finds a compromise between pursuing achievements and balancing life.",
+      "low": "Has little strong desire for personal achievement, values life experiences more than goal attainment, and is easily content with the current situation without deliberately pursuing excellence."
+    }
+  },
+  {
+    "dimension": "Preference for a certain knowledge area",
+    "id": 20,
+    "template": {
+      "high": "Strong interest and preference in a specific knowledge area, proactively engages in in-depth learning and exploration, continuously follows developments in the field, and tends to prioritize related content and activities.",
+      "middle": "Shows interest in certain fields of knowledge but without excessive focus—willing to explore diverse topics, engaging deeply in favored areas while also trying others.",
+      "low": "No obvious preference for specific knowledge areas; learning content is determined by circumstances, without deliberately pursuing or avoiding knowledge in particular fields."
+    }
+  },
+  {
+    "dimension": "Preference for a certain learning style",
+    "id": 21,
+    "template": {
+      "high": "Have a strong preference for learning styles and place great emphasis on specific learning patterns and environments, such as visual learning, auditory learning, or hands-on practice, and actively seek or create learning conditions that align with their habits.",
+      "middle": "Has certain learning style preferences but can adapt to various learning modes, able to learn efficiently in preferred ways while also adjusting to other teaching methods as needed.",
+      "low": "No specific requirements for learning methods, able to flexibly adapt to various teaching environments and modes, not too concerned about specific learning forms or methods."
+    }
+  },
+  {
+    "dimension": "Preference for a certain form of creative expression (such as art, writing, music)",
+    "id": 22,
+    "template": {
+      "high": "Have a strong preference for specific forms of creative expression, such as clearly favoring certain art styles, writing styles, or music genres. Actively seek out and deeply engage in related creative and appreciation activities.",
+      "middle": "Has a certain inclination towards specific forms of creative expression but maintains an open attitude, able to appreciate favored forms while also accepting other types of creation, with a relatively balanced level of participation.",
+      "low": "No obvious preference for forms of creative expression, and maintains an inclusive attitude toward various forms of art, writing, or music, rarely actively choosing or rejecting specific types."
+    }
+  },
+  {
+    "dimension": "Need for Order (neatness, organization, avoiding chaos)",
+    "id": 23,
+    "template": {
+      "high": "Extremely values cleanliness and order, feels strong discomfort towards disorder and chaos, actively maintains environmental order, and strictly enforces personal organizational systems.",
+      "middle": "Prefers an orderly environment but can accept moderate chaos, will do basic tidying but not overly fixate on it, and can adapt to temporary disorder when needed.",
+      "low": "Requires very little tidiness and organization, is not easily affected by chaotic environments, and can comfortably work and live in disordered conditions with little initiative to tidy up."
+    }
+  },
+  {
+    "dimension": "Need for Retention (to keep possession over an object, unwilling to lose or change)",
+    "id": 24,
+    "template": {
+      "high": "Has a very strong possessiveness towards items, is extremely unwilling to lose or replace existing possessions, and will carefully maintain and preserve all owned items.",
+      "middle": "Maintains possession over important items but can also accept necessary replacements or discards, showing a certain degree of flexibility.",
+      "low": "Being open-minded about possession of items, not being attached to keeping them, and being able to easily accept the loss or replacement of items."
+    }
+  },
+  {
+    "dimension": "Need for Inviolacy (maintaining dignity and reputation, unviolated or undamaged)",
+    "id": 25,
+    "template": {
+      "high": "Places extreme importance on personal dignity and reputation, is highly sensitive to external evaluations, and will take strong measures to avoid any potential damage or offense. Finds it difficult to tolerate any situation that undermines one's dignity.",
+      "middle": "Cares about personal image and external evaluations but can weigh situational needs, accepting moderate compromises or minor offenses when necessary.",
+      "low": "Less concerned with dignity and reputation, not easily influenced by others' evaluations, and able to calmly face criticism or minor offenses without feeling troubled."
+    }
+  },
+  {
+    "dimension": "Need for Infavoidance (avoiding failure and embarrassment)",
+    "id": 26,
+    "template": {
+      "high": "Extremely avoiding failure and embarrassment, highly sensitive to potential risks of failure, and taking various measures to avoid situations that may lead to frustration or humiliation.",
+      "middle": "Cares about the experience of failure and embarrassment but does not overly avoid it, able to accept reasonable challenges after assessing the risks.",
+      "low": "Less sensitive to failure and embarrassment, willing to actively try things that may fail, and viewing setbacks as a normal experience."
+    }
+  },
+  {
+    "dimension": "Need for Counteraction (attempting to compensate for failure by trying again, with a desire to overcome obstacles and seek pride)",
+    "id": 27,
+    "template": {
+      "high": "Has a strong reactive demand, actively tries to compensate when facing failure, desires to overcome obstacles and regain a sense of pride, and does not easily give up on challenges.",
+      "middle": "Has a certain reactive demand, will try to compensate for failure in important situations, but may occasionally choose to accept reality rather than continue to struggle.",
+      "low": "A near absence of reactive demand, less desire to compensate for failure or obstacles, and a tendency to go with the flow rather than seek to overcome them."
+    }
+  },
+  {
+    "dimension": "Need for Seclusion (desire for isolation from others, maintaining privacy)",
+    "id": 28,
+    "template": {
+      "high": "An intense desire for solitude and privacy protection, strongly avoiding social interactions, requiring a significant amount of personal space and time to maintain psychological comfort",
+      "middle": "Enjoys moderate alone time but can also engage in social activities, maintaining a relatively balanced approach between personal privacy and social needs.",
+      "low": "Requires little alone time, enjoys continuous social interaction, has low privacy needs, and is comfortable sharing space and information with others."
+    }
+  },
+  {
+    "dimension": "Need for Dominance (controlling the environment or others through command or persuasion)",
+    "id": 29,
+    "template": {
+      "high": "Demonstrates a strong need for dominance, tends to control the environment and others through commands or persuasion, enjoys a dominant position, and actively seeks influence.",
+      "middle": "Has a moderate tendency toward dominance—demonstrates leadership when necessary but is also willing to collaborate or follow others’ direction, without always seeking control.",
+      "low": "There is little need to dominate others or the environment, preferring equal collaboration or compliance, avoiding conflict and dominance, and preferring to follow rather than lead."
+    }
+  },
+  {
+    "dimension": "Need for Deference (worship or obedience to others, following authority, admiration, or rules)",
+    "id": 30,
+    "template": {
+      "high": "A strong desire for respect and obedience, a tendency to venerate authority and strictly adhere to rules, a great emphasis on receiving recognition and admiration from others, and a habit of following instructions and traditional norms.",
+      "middle": "Has a certain degree of respect for authority and rules but maintains independent thinking, able to follow instructions while also questioning them in appropriate situations, balancing self-judgment with external demands.",
+      "low": "Shows little respect for authority or rules, tends to make independent decisions, lacks interest in obeying others or following traditional norms, and places more emphasis on personal judgment than on external approval."
+    }
+  },
+  {
+    "dimension": "Need for Autonomy (resisting influence from others, pursuing independence and self-reliance)",
+    "id": 31,
+    "template": {
+      "high": "Places extreme importance on independence, strongly resists influence or control by others, insists on making one's own decisions and being self-reliant, and pursues a high degree of autonomy in all aspects.",
+      "middle": "Values independence but can moderately accept others' suggestions, considering cooperation and compromise while maintaining autonomy, balancing self-assertion and external influence.",
+      "low": "Requires less autonomy, is easy to accept others' opinions or rely on external decisions, shows less insistence on one's own views, is adaptable and willing to comply."
+    }
+  },
+  {
+    "dimension": "Need for Contrariance (pursuing uniqueness, being different, or opposing the norm)",
+    "id": 32,
+    "template": {
+      "high": "A strong pursuit of uniqueness and being different, intensely opposing mainstream norms, and tending to adopt distinctive behaviors and choices to highlight individuality.",
+      "middle": "Has a certain tendency to pursue uniqueness but maintains a balance between following conventions and expressing individuality, occasionally choosing to deviate from the mainstream but not in an extreme manner.",
+      "low": "Shows little desire to stand out, is willing to follow social norms and mainstream trends, and maintains an open attitude toward behaviors that conform to or deviate from the norm"
+    }
+  },
+  {
+    "dimension": "Need for Abasement (submittance and obedience to others, accepting blame and punishment, even enjoying pain or misfortune to some extent)",
+    "id": 33,
+    "template": {
+      "high": "Highly requires submission, tends to actively obey others' will, is willing to accept blame and punishment, and even to some extent enjoys the feelings brought by pain or misfortune.",
+      "middle": "Can accept submission or compromise in specific situations, though not actively seeking it—responds to criticism and punishment with rational acceptance rather than deliberately pursuing negative experiences.",
+      "low": "Strongly resists obeying others, insists on self-expression, refuses to accept unreasonable blame or punishment, and clearly avoids pain and misfortune."
+    }
+  },
+  {
+    "dimension": "Need for Aggression (controlling, punishing, or harming others through forceful means)",
+    "id": 34,
+    "template": {
+      "high": "Has a strong tendency towards dominance and aggression, habitually uses coercive means to control, punish, or harm others to achieve goals, and is prone to taking drastic actions to maintain its own authority.",
+      "middle": "In certain situations, may exhibit aggression but usually can control the degree, tends to choose moderate coercive means after weighing the pros and cons.",
+      "low": "Rarely has a desire to attack others, rejects violence or coercion, and prefers to resolve conflicts through negotiation and peaceful means."
+    }
+  },
+  {
+    "dimension": "Need for Affiliation (desire for close, loyal relationships, pleasing others, winning friendships and attention)",
+    "id": 35,
+    "template": {
+      "high": "A strong desire to establish close and loyal relationships, striving to please others in order to gain friendship and attention, placing great importance on interpersonal relationships.",
+      "middle": "Values interpersonal relationships while maintaining moderation—willing to sustain emotional bonds without being overly accommodating, striking a balance in social interactions.",
+      "low": "Have a lower need to form close relationships, value independence and autonomy more, and do not deliberately seek recognition or attention from others"
+    }
+  },
+  {
+    "dimension": "Need for Rejection (isolating, excluding, or discarding oneself from negatively evaluated objects or people)",
+    "id": 36,
+    "template": {
+      "high": "There is an extreme need to avoid objects of negative evaluation, tending to actively isolate, exclude, or become distant from people or things that are negatively evaluated, with high sensitivity and strong reactions to such situations.",
+      "middle": "Shows some tendency to avoid negatively perceived individuals but weighs the situation—may occasionally choose selective contact or tolerance rather than complete avoidance.",
+      "low": "It is almost unnecessary to avoid objects of negative evaluation; one can more naturally approach or deal with people or things that have received negative evaluations, and is less likely to feel the impulse to become distant."
+    }
+  },
+  {
+    "dimension": "Need for Nurturance (assisting the weak, caring for others, protecting them from danger)",
+    "id": 37,
+    "template": {
+      "high": "Highly concerned about vulnerable groups, has a strong desire to help others, proactively offers care and protection, and regards the safety and well-being of others as an important responsibility.",
+      "middle": "Has a certain degree of empathy and caring awareness, will help others within their capabilities, but will not over-intervene or sacrifice their own interests.",
+      "low": "Shows less proactive concern for others' needs, tends to keep a distance, and will not offer protection or care unless necessary."
+    }
+  },
+  {
+    "dimension": "Need for Succorance (desire to have one’s own needs met by others, including being loved, cared for, helped, forgiven, and comforted)",
+    "id": 38,
+    "template": {
+      "high": "Strongly desires care and attention from others, has a strong dependency on others to fulfill emotional and material needs, and requires frequent help, comfort, and forgiveness.",
+      "middle": "Occasionally needs support and care from others but overall maintains a certain degree of independence, being willing to accept help while also self-regulating.",
+      "low": "Extremely independent, rarely seeking care or emotional support from others, tends to handle their needs and emotions alone."
+    }
+  },
+  {
+    "dimension": "Need for Play (enjoying fun, relaxation, laughter)",
+    "id": 39,
+    "template": {
+      "high": "Places great importance on entertainment and leisure activities, is enthusiastic about seeking opportunities for fun, relaxation, and laughter, and often takes the initiative to arrange recreational time.",
+      "middle": "Enjoys moments of entertainment and relaxation but can also balance work and leisure, not overly pursuing or completely neglecting recreational needs.",
+      "low": "Low interest in recreational activities, rarely actively seeking pleasure or relaxation, and more inclined towards a serious or practical lifestyle."
+    }
+  },
+  {
+    "dimension": "Degree of concern for the harmlessness of the statement",
+    "id": 40,
+    "template": {
+      "high": "Extremely concerned about the harmlessness of speech, thinks carefully before speaking, and places great emphasis on avoiding any potential harm or offense, tending to use polite and cautious expressions.",
+      "middle": "Has a certain awareness of the appropriateness of speech but does not overthink it—can usually balance directness and politeness, occasionally making unintentional mistakes due to lack of consideration.",
+      "low": "Less sensitive to the potential impact of their words, they speak directly and casually, considering little whether their wording is appropriate or the consequences it might bring. They believe honesty is more important than phrasing."
+    }
+  },
+  {
+    "dimension": "Degree of concern for the instructionfollowing of the statement",
+    "id": 41,
+    "template": {
+      "high": "Highly values adherence to instructions in the statements, strictly follows the requirements, and is highly sensitive to any deviations or ambiguous expressions.",
+      "middle": "Pays attention to the directive nature of instructions but allows some flexibility—can accept reasonable adjustments as long as the core requirements remain clear.",
+      "low": "The requirement for adherence to the declared instructions is very low, primarily focusing on the content substance rather than implementation details, allowing for a large degree of interpretive flexibility."
+    }
+  },
+  {
+    "dimension": "Degree of concern for the honesty of the statement",
+    "id": 42,
+    "template": {
+      "high": "Very concerned about the truthfulness of statements, has very high requirements for the accuracy of information, actively verifies sources, and rejects false content.",
+      "middle": "Values the accuracy of statements while maintaining some flexibility—can tolerate non-malicious inaccuracies but still prefers to obtain truthful information.",
+      "low": "Not very concerned about the authenticity of speech, rarely verifying the truth of information, and having a high tolerance for false or uncertain content."
+    }
+  },
+  {
+    "dimension": "Degree of concern for the truthfulness of the statement",
+    "id": 43,
+    "template": {
+      "high": "Very concerned about the truthfulness of statements, has high requirements for the accuracy of information, actively verifies sources, and rejects false statements.",
+      "middle": "Pays attention to the truthfulness of statements but can tolerate some vagueness or non-malicious errors, without over-focusing on minor details.",
+      "low": "The requirement for the authenticity of speech is lower, with more emphasis placed on expressing intent rather than factual accuracy, making it easier to accept unverified information."
+    }
+  },
+  {
+    "dimension": "Degree of concern for the helpfulness of the statement",
+    "id": 44,
+    "template": {
+      "high": "Cares greatly about the helpfulness of speech, focusing on the practical effectiveness and constructiveness of communication, and carefully chooses words to ensure they are helpful to others.",
+      "middle": "Values the practicality of statements but does not overthink them—can accept casual communication while maintaining basic helpfulness.",
+      "low": "Not too concerned about whether the speech is helpful, speaking casually and naturally, focusing more on the expression itself rather than practical utility."
+    }
+  },
+  {
+    "dimension": "Degree of concern for the coherence of the statement",
+    "id": 45,
+    "template": {
+      "high": "Places great emphasis on the logic and coherence of statements, is highly sensitive to contradictions or jumps in the expression, and will actively correct or request clarification on inconsistencies.",
+      "middle": "Pays attention to the coherence of statements but can tolerate some degree of looseness or jumps, only questioning when there are obvious contradictions.",
+      "low": "The requirements for coherence of statements are very low, with little attention paid to logical gaps or jumps in information, and fragmented or unstructured expressions are easily accepted."
+    }
+  },
+  {
+    "dimension": "Degree of concern for the complexity of the statement",
+    "id": 46,
+    "template": {
+      "high": "Highly concerned with the complexity of statements, tends to use precise, rigorous, and detailed expressions, paying attention to the accuracy of logical structure and professional terminology.",
+      "middle": "Has a certain degree of concern for the complexity of statements and can adjust their expression according to the context, using both simple and straightforward language as well as understanding and accepting necessary complex expressions.",
+      "low": "Little attention is paid to the complexity of statements, with a preference for using simple and direct expressions, avoiding complex terminology and lengthy explanations, with clarity as the primary goal."
+    }
+  }
+]
