@@ -8,8 +8,10 @@ import yaml
 import time
 import uuid
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, Response
 from flask_cors import CORS
+import queue
+import threading
 
 from utils.utils import get_logger
 
@@ -218,7 +220,7 @@ def save_profile():
 
 @app.route('/api/start-simulation', methods=['POST'])
 def start_simulation():
-    """Start assistant evaluation simulation"""
+    """Start assistant evaluation simulation (non-streaming, kept for compatibility)"""
     sim_session = get_or_create_session()
 
     try:
@@ -270,6 +272,84 @@ def start_simulation():
         sim_session['simulator_running'] = False
         logger.error(f"Simulation error: {e}")
         return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/stream-simulation')
+def stream_simulation():
+    """Stream assistant evaluation simulation results using Server-Sent Events"""
+    sequence_id = request.args.get('sequence_id')
+    assistant_model = request.args.get('assistant_model', 'deepseek-chat')
+    n_events = int(request.args.get('n_events', 2))
+    n_rounds = int(request.args.get('n_rounds', 4))
+
+    def generate():
+        # Use a queue to communicate between the callback and the generator
+        result_queue = queue.Queue()
+        error_holder = {'error': None}
+        done_event = threading.Event()
+
+        def callback(data):
+            """Callback function that puts data into the queue"""
+            result_queue.put(data)
+
+        def run_simulation_thread():
+            """Run simulation in a separate thread"""
+            try:
+                from run_simulation import build_simulator
+
+                exp_name = f"{sequence_id}_{int(time.time())}"
+                sim = build_simulator(callback, exp_name,
+                                    config_path='/remote-home/fyduan/secrets/config.yaml',
+                                    assistant_model_name=assistant_model)
+
+                sim_config = {
+                    "user_config": {
+                        "use_emotion_chain": True,
+                        "use_dynamic_memory": False,
+                    },
+                    "assistant_config": {
+                        "use_profile_memory": False,
+                        "use_key_info_memory": False,
+                    },
+                }
+
+                sim.init_env(sequence_id)
+                sim.run_simulation(n_events=n_events, n_rounds=n_rounds, **sim_config)
+
+            except Exception as e:
+                error_holder['error'] = str(e)
+                logger.error(f"Simulation error: {e}")
+            finally:
+                done_event.set()
+
+        # Start simulation in background thread
+        sim_thread = threading.Thread(target=run_simulation_thread)
+        sim_thread.start()
+
+        # Yield results as they come in
+        while not done_event.is_set() or not result_queue.empty():
+            try:
+                # Wait for data with timeout to check done_event periodically
+                data = result_queue.get(timeout=0.1)
+                yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+            except queue.Empty:
+                continue
+
+        # Check for errors
+        if error_holder['error']:
+            yield f"data: {json.dumps({'step': 'error', 'error': error_holder['error']})}\n\n"
+
+        # Send completion signal
+        yield f"data: {json.dumps({'step': 'complete'})}\n\n"
+
+    return Response(
+        generate(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no'
+        }
+    )
 
 @app.route('/api/generate-event', methods=['POST'])
 def generate_event():
