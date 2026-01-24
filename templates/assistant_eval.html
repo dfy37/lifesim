@@ -160,6 +160,12 @@
                         </svg>
                         Start Simulation
                     </button>
+                    <button id="stop-btn" class="btn btn-danger hidden">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="6" y="6" width="12" height="12"/>
+                        </svg>
+                        Stop
+                    </button>
                     <button id="clear-btn" class="btn btn-secondary">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="23 4 23 10 17 10"/>
@@ -283,12 +289,14 @@
     const chatMessages = document.getElementById('chat-messages');
     const welcomeMessage = document.getElementById('welcome-message');
     const startBtn = document.getElementById('start-btn');
+    const stopBtn = document.getElementById('stop-btn');
     const clearBtn = document.getElementById('clear-btn');
     const sequenceSelect = document.getElementById('sequence-select');
     const timelineContent = document.getElementById('timeline-content');
 
     // Event Listeners
     startBtn.addEventListener('click', startSimulation);
+    stopBtn.addEventListener('click', stopSimulation);
     clearBtn.addEventListener('click', clearSession);
     sequenceSelect.addEventListener('change', loadUserProfile);
     document.getElementById('edit-profile-btn').addEventListener('click', openModal);
@@ -454,80 +462,104 @@
         if (loading) loading.remove();
     }
 
-    async function startSimulation() {
+    // Store current EventSource for cleanup
+    let currentEventSource = null;
+
+    function startSimulation() {
         if (isSimulating) return;
 
         isSimulating = true;
         startBtn.disabled = true;
-        startBtn.innerHTML = `
-            <div class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></div>
-            Simulating...
-        `;
+        startBtn.classList.add('hidden');
+        stopBtn.classList.remove('hidden');
 
         // Clear previous content
         chatMessages.innerHTML = '';
         timelineContent.innerHTML = '';
         timelineEvents = [];
 
-        showLoading();
-
         const sequenceId = document.getElementById('sequence-select').value;
         const assistantModel = document.getElementById('model-select').value;
         const nEvents = parseInt(document.getElementById('events-select').value);
         const nRounds = parseInt(document.getElementById('rounds-select').value);
 
-        try {
-            const response = await fetch('/api/start-simulation', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sequence_id: sequenceId,
-                    assistant_model: assistantModel,
-                    n_events: nEvents,
-                    n_rounds: nRounds
-                })
-            });
+        // Build SSE URL with query parameters
+        const params = new URLSearchParams({
+            sequence_id: sequenceId,
+            assistant_model: assistantModel,
+            n_events: nEvents,
+            n_rounds: nRounds
+        });
 
-            hideLoading();
+        // Close any existing EventSource
+        if (currentEventSource) {
+            currentEventSource.close();
+        }
 
-            const data = await response.json();
+        // Create EventSource for SSE
+        currentEventSource = new EventSource(`/api/stream-simulation?${params.toString()}`);
 
-            if (data.success) {
-                // Process results
-                data.results.forEach((result, idx) => {
-                    if (result.step === 'init') {
-                        const event = result.event;
-                        addEventCard(event, result.event_index);
-                        addTimelineEvent(event, result.event_index);
+        currentEventSource.onmessage = function(e) {
+            try {
+                const result = JSON.parse(e.data);
 
-                        if (event.location_detail) {
-                            updateMap(event.location_detail.latitude, event.location_detail.longitude);
-                        }
-                    } else if (result.step === 'turn') {
-                        const utterance = result.utterance;
-                        addMessage(utterance.role, utterance.content, utterance.emotion);
-                    } else if (result.step === 'dropout') {
-                        addDropoutAnalysis(result.dropout);
+                if (result.step === 'init') {
+                    // New event scene - update timeline, map, and chat area
+                    const event = result.event;
+                    addEventCard(event, result.event_index);
+                    addTimelineEvent(event, result.event_index);
+
+                    if (event.location_detail) {
+                        updateMap(event.location_detail.latitude, event.location_detail.longitude);
                     }
-                });
-
-                showToast('Simulation completed successfully!', 'success');
-            } else {
-                showToast('Simulation failed: ' + (data.error || 'Unknown error'), 'error');
+                } else if (result.step === 'turn') {
+                    // New conversation turn - add message to chat
+                    const utterance = result.utterance;
+                    addMessage(utterance.role, utterance.content, utterance.emotion);
+                } else if (result.step === 'dropout') {
+                    // Dropout/churn analysis
+                    addDropoutAnalysis(result.dropout);
+                } else if (result.step === 'error') {
+                    // Error occurred
+                    showToast('Simulation error: ' + result.error, 'error');
+                    finishSimulation();
+                } else if (result.step === 'complete') {
+                    // Simulation completed
+                    showToast('Simulation completed successfully!', 'success');
+                    finishSimulation();
+                }
+            } catch (err) {
+                console.error('Error parsing SSE data:', err);
             }
-        } catch (error) {
-            hideLoading();
-            showToast('Error: ' + error.message, 'error');
+        };
+
+        currentEventSource.onerror = function(e) {
+            console.error('EventSource error:', e);
+            showToast('Connection error. Please try again.', 'error');
+            finishSimulation();
+        };
+    }
+
+    function finishSimulation() {
+        if (currentEventSource) {
+            currentEventSource.close();
+            currentEventSource = null;
         }
 
         isSimulating = false;
         startBtn.disabled = false;
-        startBtn.innerHTML = `
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="5 3 19 12 5 21 5 3"/>
-            </svg>
-            Start Simulation
-        `;
+        startBtn.classList.remove('hidden');
+        stopBtn.classList.add('hidden');
+    }
+
+    // Stop simulation button handler
+    function stopSimulation() {
+        if (currentEventSource) {
+            currentEventSource.close();
+            currentEventSource = null;
+        }
+        showToast('Simulation stopped', 'warning');
+        finishSimulation();
     }
 
     async function clearSession() {
