@@ -828,6 +828,130 @@ textarea.form-control {
     display: inline-block;
     margin-bottom: 0.5rem;
 }
+
+/* Markdown rendering styles */
+.markdown-body {
+    line-height: 1.6;
+}
+
+.markdown-body p {
+    margin: 0 0 0.75rem 0;
+}
+
+.markdown-body p:last-child {
+    margin-bottom: 0;
+}
+
+.markdown-body h1, .markdown-body h2, .markdown-body h3,
+.markdown-body h4, .markdown-body h5, .markdown-body h6 {
+    margin: 1rem 0 0.5rem 0;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.markdown-body h1 { font-size: 1.5rem; }
+.markdown-body h2 { font-size: 1.25rem; }
+.markdown-body h3 { font-size: 1.125rem; }
+.markdown-body h4 { font-size: 1rem; }
+
+.markdown-body ul, .markdown-body ol {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+
+.markdown-body li {
+    margin: 0.25rem 0;
+}
+
+.markdown-body code {
+    background: rgba(0, 0, 0, 0.1);
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--radius-sm);
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.875em;
+}
+
+.markdown-body pre {
+    background: var(--gray-800);
+    color: var(--gray-100);
+    padding: 1rem;
+    border-radius: var(--radius);
+    overflow-x: auto;
+    margin: 0.75rem 0;
+}
+
+.markdown-body pre code {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+}
+
+.markdown-body blockquote {
+    border-left: 4px solid var(--primary-color);
+    margin: 0.75rem 0;
+    padding: 0.5rem 1rem;
+    background: var(--gray-50);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.markdown-body blockquote p {
+    margin: 0;
+}
+
+.markdown-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.75rem 0;
+}
+
+.markdown-body th, .markdown-body td {
+    border: 1px solid var(--gray-300);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+}
+
+.markdown-body th {
+    background: var(--gray-100);
+    font-weight: 600;
+}
+
+.markdown-body a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.markdown-body a:hover {
+    text-decoration: underline;
+}
+
+.markdown-body hr {
+    border: none;
+    border-top: 1px solid var(--gray-300);
+    margin: 1rem 0;
+}
+
+.markdown-body img {
+    max-width: 100%;
+    border-radius: var(--radius);
+}
+
+/* Adjust code styles for user messages (light text on dark bg) */
+.message-user .markdown-body code {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.message-user .markdown-body pre {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.message-user .markdown-body blockquote {
+    background: rgba(255, 255, 255, 0.1);
+    border-left-color: rgba(255, 255, 255, 0.5);
+}
+
+.message-user .markdown-body a {
+    color: rgba(255, 255, 255, 0.9);
+}
 .text-sm { font-size: 0.875rem; }
 .text-xs { font-size: 0.75rem; }
 

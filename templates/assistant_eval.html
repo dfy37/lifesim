@@ -392,11 +392,15 @@
         const isUser = role === 'user';
         const msg = document.createElement('div');
         msg.className = `message message-${isUser ? 'user' : 'assistant'} fade-in`;
+
+        // Render markdown content
+        const renderedContent = typeof marked !== 'undefined' ? marked.parse(content) : content;
+
         msg.innerHTML = `
             <div class="message-avatar">${isUser ? 'U' : 'A'}</div>
-            <div class="message-content">
+            <div class="message-content markdown-body">
                 ${emotion ? `<span class="emotion-label">Emotion: ${emotion}</span>` : ''}
-                ${content}
+                ${renderedContent}
             </div>
         `;
         chatMessages.appendChild(msg);
