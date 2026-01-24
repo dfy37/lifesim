@@ -274,7 +274,7 @@ def render_sidebar_selection(sequence_ids):
     )
     assistant_model = st.sidebar.selectbox(
         "请选择要参与模拟的助手模型: ",
-        ['deepseek-chat', 'gpt5-mini', 'qwen3-32B'],
+        ['deepseek-chat', 'gpt-5-mini', 'gpt-4o'],
         index=0
     )
     n_events = st.sidebar.selectbox(
@@ -458,14 +458,14 @@ def create_streamlit_callback(main_area_render, map_render, timeline_render):
             main_area_render.render(data)
     return _callback
 
-def run_simulation(main_area_render, map_render, timeline_render, sequence_id, n_events, n_rounds, n_exp):
+def run_simulation(main_area_render, map_render, timeline_render, sequence_id, n_events, n_rounds, n_exp, assistant_model):
     """执行仿真"""
     st.session_state["simulator_running"] = True
 
     callback = create_streamlit_callback(main_area_render, map_render, timeline_render)
 
     exp_name = f"{sequence_id}_{str(n_exp)}"
-    sim = build_simulator(callback, exp_name, config_path='./config.yaml')
+    sim = build_simulator(callback, exp_name, config_path='./config.yaml', assistant_model=assistant_model)
     st.session_state["simulator"] = sim
 
     sim_config = {
@@ -551,7 +551,8 @@ def render_assistant_eval_page():
             sequence_id=sequence_id, 
             n_events=n_events, 
             n_rounds=n_rounds, 
-            n_exp=n_exp
+            n_exp=n_exp,
+            assistant_model=assistant_model
         )
 
 if __name__ == '__main__':

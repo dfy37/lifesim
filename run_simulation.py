@@ -25,7 +25,29 @@ def build_retriever_config(name, idx, retriever_cfg):
         "logger_silent": retriever_cfg.get("logger_silent", False)
     }
 
-def build_simulator(on_turn_update, exp_name, config_path="config.yaml"):
+
+MODEL_CFGS = {
+    "deepseek-chat": {
+        "model_path": "deepseek-chat",
+        "base_url": "https://api.deepseek.com",
+        "api_key": "sk-785db80201014ade891d1db0525e48fd",
+        "vllmapi": False
+    },
+    "gpt-5-mini": {
+        "model_path": "gpt-5-mini",
+        "base_url": "https://api.ai-gaochao.cn/v1",
+        "api_key": "sk-6xTnWH3vmE0MzXtlC163036b040546Fd92914105Fc74359e",
+        "vllmapi": False,
+    },
+    "gpt-4o": {
+        "model_path": "gpt-4o",
+        "base_url": "https://api.ai-gaochao.cn/v1",
+        "api_key": "sk-6xTnWH3vmE0MzXtlC163036b040546Fd92914105Fc74359e",
+        "vllmapi": False,
+    }
+}
+
+def build_simulator(on_turn_update, exp_name, config_path="config.yaml", assistant_model=None):
     cfg = load_config(config_path)
 
     # MODEL PATHS
@@ -36,6 +58,9 @@ def build_simulator(on_turn_update, exp_name, config_path="config.yaml"):
     user_model_name = os.path.basename(user_m_cfg["model_path"])
     assistant_model_name = os.path.basename(asst_m_cfg["model_path"])
     analysis_model_name = os.path.basename(analysis_m_cfg["model_path"])
+
+    if assistant_model:
+        asst_m_cfg = MODEL_CFGS.get(assistant_model, asst_m_cfg)
 
     user_model = load_model(
         model_name=user_model_name,
