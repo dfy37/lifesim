@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}LifeSim - Full Cycle User Simulator{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>Full Cycle User Simulator</h1>
+        <p>Simulate users' long-term life experiences and AI assistant conversations across various life events.</p>
+    </section>
+
+    <!-- Mode Selection -->
+    <div class="grid grid-2" style="max-width: 900px; margin: 0 auto;">
+        <!-- Assistant Evaluation Mode -->
+        <a href="/assistant-eval" class="mode-card" style="text-decoration: none;">
+            <div class="icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary-color);">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                    <path d="M2 17l10 5 10-5"/>
+                    <path d="M2 12l10 5 10-5"/>
+                </svg>
+            </div>
+            <h3>Assistant Evaluation Mode</h3>
+            <p>Pre-generated event sequences for automated simulation. Evaluate AI assistant responses and identify churn points.</p>
+            <span class="btn btn-primary">Enter Evaluation Mode</span>
+        </a>
+
+        <!-- Free Chat Mode -->
+        <a href="/user-life" class="mode-card" style="text-decoration: none;">
+            <div class="icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--secondary-color);">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+            </div>
+            <h3>Free Chat Mode</h3>
+            <p>Real-time life event generation. Interact with simulated users in dynamically generated scenarios.</p>
+            <span class="btn btn-success">Enter Free Chat Mode</span>
+        </a>
+    </div>
+
+    <!-- Features Section -->
+    <section style="margin-top: 4rem; padding: 2rem 0;">
+        <h2 class="text-center mb-5">Key Features</h2>
+        <div class="grid grid-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div style="font-size: 2.5rem; margin-bottom: 1rem;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 6v6l4 2"/>
+                        </svg>
+                    </div>
+                    <h4>Life Event Timeline</h4>
+                    <p class="text-muted">Track user experiences across time with rich event visualization.</p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body text-center">
+                    <div style="font-size: 2.5rem; margin-bottom: 1rem;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--secondary-color)" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                    </div>
+                    <h4>User Profile Simulation</h4>
+                    <p class="text-muted">Detailed user personas with customizable attributes and preferences.</p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body text-center">
+                    <div style="font-size: 2.5rem; margin-bottom: 1rem;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--warning-color)" stroke-width="2">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                            <line x1="12" y1="9" x2="12" y2="13"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                    </div>
+                    <h4>Churn Analysis</h4>
+                    <p class="text-muted">Identify potential user churn points in assistant interactions.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section style="margin-top: 3rem; padding: 2rem 0;">
+        <h2 class="text-center mb-5">How It Works</h2>
+        <div class="card" style="max-width: 800px; margin: 0 auto;">
+            <div class="card-body">
+                <div class="timeline-content">
+                    <div class="timeline-item">
+                        <div class="timeline-item-header">Step 1</div>
+                        <div class="timeline-item-content">
+                            <strong>Select User Profile</strong><br>
+                            Choose from pre-defined user profiles or customize your own with detailed demographics and preferences.
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-item-header">Step 2</div>
+                        <div class="timeline-item-content">
+                            <strong>Generate Life Events</strong><br>
+                            The simulator creates realistic life events based on user profile and context.
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-item-header">Step 3</div>
+                        <div class="timeline-item-content">
+                            <strong>Simulate Conversations</strong><br>
+                            Watch AI-powered user and assistant agents interact naturally.
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-item-header">Step 4</div>
+                        <div class="timeline-item-content">
+                            <strong>Analyze Results</strong><br>
+                            Review churn analysis and conversation quality metrics.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

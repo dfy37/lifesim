@@ -1,0 +1,775 @@
+{% extends "base.html" %}
+
+{% block title %}Free Chat - LifeSim{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="main-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <a href="/" class="btn btn-secondary btn-block mb-4">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Back to Home
+            </a>
+
+            <!-- User Selection -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    User Selection
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">User ID</label>
+                    <select id="sequence-select" class="form-control">
+                        {% for seq_id in sequence_ids %}
+                        <option value="{{ seq_id }}" {% if seq_id == selected_seq_id %}selected{% endif %}>{{ seq_id }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <p class="text-sm text-muted">Maximum 10 events per session</p>
+            </div>
+
+            <!-- User Profile -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                    </svg>
+                    User Profile
+                </div>
+
+                <div id="profile-container">
+                    {% if user_profile %}
+                    <div class="profile-card">
+                        <div class="profile-item">
+                            <span class="profile-label">Gender</span>
+                            <span class="profile-value">{{ user_profile.gender or 'N/A' }}</span>
+                        </div>
+                        <div class="profile-item">
+                            <span class="profile-label">Age</span>
+                            <span class="profile-value">{{ user_profile.age or 'N/A' }}</span>
+                        </div>
+                        <div class="profile-item">
+                            <span class="profile-label">Marital</span>
+                            <span class="profile-value">{{ user_profile.marital or 'N/A' }}</span>
+                        </div>
+                        <div class="profile-item">
+                            <span class="profile-label">Area</span>
+                            <span class="profile-value">{{ user_profile.area or 'N/A' }}</span>
+                        </div>
+                        <div class="profile-item">
+                            <span class="profile-label">Income</span>
+                            <span class="profile-value">{{ user_profile.income or 'N/A' }}</span>
+                        </div>
+                        <div class="profile-item">
+                            <span class="profile-label">Employment</span>
+                            <span class="profile-value">{{ user_profile.employment or 'N/A' }}</span>
+                        </div>
+                    </div>
+
+                    {% if user_profile.personality %}
+                    <div class="mb-3">
+                        <span class="text-sm text-muted">Personality</span>
+                        <div class="tag-list mt-1">
+                            {% for trait in user_profile.personality %}
+                            <span class="badge badge-primary">{{ trait }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if user_profile.preferences %}
+                    <div class="mb-3">
+                        <span class="text-sm text-muted">Preferences</span>
+                        <div class="tag-list mt-1">
+                            {% for pref in user_profile.preferences[:5] %}
+                            <span class="badge badge-success">{{ pref[:30] }}{% if pref|length > 30 %}...{% endif %}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+
+                <button id="edit-profile-btn" class="btn btn-secondary btn-block mt-3">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    Edit Profile
+                </button>
+            </div>
+
+            <!-- Session Controls -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                    Session
+                </div>
+
+                <div class="d-flex gap-2" style="flex-direction: column;">
+                    <button id="next-event-btn" class="btn btn-success btn-block">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"/>
+                            <polyline points="19 12 12 19 5 12"/>
+                        </svg>
+                        Generate Next Event
+                    </button>
+                    <button id="clear-btn" class="btn btn-secondary btn-block">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                        </svg>
+                        Clear Session
+                    </button>
+                </div>
+
+                <div class="mt-3 text-center">
+                    <span class="badge badge-primary" id="event-counter">Events: 0 / 10</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <div class="chat-container">
+            <div class="chat-header" style="background: linear-gradient(135deg, #10b981, #059669);">
+                <h4>Free Chat Mode</h4>
+                <p>Chat with the simulated user in real-time generated scenarios</p>
+            </div>
+
+            <div class="chat-messages" id="chat-messages">
+                <!-- Welcome Message -->
+                <div class="text-center text-muted p-4" id="welcome-message">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.5; margin-bottom: 1rem;">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <h5 class="text-muted">Ready to Start</h5>
+                    <p>Click "Generate Next Event" to create a life event, then chat with the simulated user.</p>
+                </div>
+
+                {% for event in timeline_events %}
+                <div class="event-card fade-in">
+                    <div class="event-card-header">
+                        <span class="event-badge">Event {{ loop.index }}</span>
+                        <h5>{{ event.dialogue_scene or 'Life Event' }}</h5>
+                    </div>
+                    <div class="event-details">
+                        <div class="event-detail">
+                            <span class="event-detail-label">Time:</span>
+                            <span class="event-detail-value">{{ event.time or 'N/A' }}</span>
+                        </div>
+                        <div class="event-detail">
+                            <span class="event-detail-label">Location:</span>
+                            <span class="event-detail-value">{{ event.location or 'N/A' }}</span>
+                        </div>
+                        <div class="event-detail">
+                            <span class="event-detail-label">Event:</span>
+                            <span class="event-detail-value">{{ event.event or 'N/A' }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                {% for msg in history_messages %}
+                {% if msg.role != 'system' %}
+                <div class="message message-{{ 'user' if msg.role == 'user' else 'assistant' }}">
+                    <div class="message-avatar">{{ 'Y' if msg.role == 'user' else 'U' }}</div>
+                    <div class="message-content">{{ msg.content }}</div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            <div class="chat-input-area">
+                <div class="chat-input-wrapper">
+                    <input type="text"
+                           id="chat-input"
+                           class="chat-input"
+                           placeholder="Talk to the simulated user..."
+                           disabled>
+                    <button id="send-btn" class="btn btn-primary" disabled>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"/>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-xs text-muted mt-2 text-center">Generate an event first to start chatting</p>
+            </div>
+        </div>
+
+        <!-- Right Panel: Map & Timeline -->
+        <aside>
+            <!-- Map -->
+            <div class="map-container">
+                <div class="map-header">
+                    <h5>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                            <circle cx="12" cy="10" r="3"/>
+                        </svg>
+                        Real-time Location
+                    </h5>
+                </div>
+                <div id="map"></div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="timeline-container">
+                <div class="timeline-header">
+                    <h5>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        User Life Experience
+                    </h5>
+                </div>
+                <div class="timeline-content" id="timeline-content">
+                    {% if timeline_events %}
+                        {% for event in timeline_events %}
+                        <div class="timeline-item">
+                            <div class="timeline-item-header">Event {{ loop.index }} - {{ event.time or 'N/A' }}</div>
+                            <div class="timeline-item-content">{{ event.event or 'No description' }}</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="text-center text-muted p-3">
+                        <p class="text-sm">No events yet. Generate an event to see timeline.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div id="profile-modal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h4>Edit User Profile</h4>
+            <button class="btn btn-secondary" style="padding: 0.5rem;" onclick="closeModal()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="profile-form">
+                <input type="hidden" id="edit-user-id" value="{{ user_profile.user_id if user_profile else '' }}">
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Gender</label>
+                        <input type="text" id="edit-gender" class="form-control" value="{{ user_profile.gender if user_profile else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Age</label>
+                        <input type="text" id="edit-age" class="form-control" value="{{ user_profile.age if user_profile else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Marital Status</label>
+                        <input type="text" id="edit-marital" class="form-control" value="{{ user_profile.marital if user_profile else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Area</label>
+                        <input type="text" id="edit-area" class="form-control" value="{{ user_profile.area if user_profile else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Income</label>
+                        <input type="text" id="edit-income" class="form-control" value="{{ user_profile.income if user_profile else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Employment</label>
+                        <input type="text" id="edit-employment" class="form-control" value="{{ user_profile.employment if user_profile else '' }}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Personality (comma-separated)</label>
+                    <input type="text" id="edit-personality" class="form-control" value="{{ user_profile.personality|join(', ') if user_profile and user_profile.personality else '' }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Preferences (one per line)</label>
+                    <textarea id="edit-preferences" class="form-control" rows="4">{{ user_profile.preferences|join('\n') if user_profile and user_profile.preferences else '' }}</textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize map
+    let map = L.map('map').setView([40.7128, -74.0060], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    let currentMarker = null;
+
+    // Page state
+    let eventCounter = {{ timeline_events|length if timeline_events else 0 }};
+    let isGenerating = false;
+    let isChatting = false;
+    let timelineEvents = {{ timeline_events|tojson if timeline_events else '[]' }};
+
+    // DOM Elements
+    const chatMessages = document.getElementById('chat-messages');
+    const welcomeMessage = document.getElementById('welcome-message');
+    const nextEventBtn = document.getElementById('next-event-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+    const sequenceSelect = document.getElementById('sequence-select');
+    const timelineContent = document.getElementById('timeline-content');
+    const eventCounterBadge = document.getElementById('event-counter');
+
+    // Initialize state
+    updateEventCounter();
+    updateChatInputState();
+
+    // If we have events, update the map to the last event
+    if (timelineEvents.length > 0) {
+        const lastEvent = timelineEvents[timelineEvents.length - 1];
+        if (lastEvent.location_detail) {
+            updateMap(lastEvent.location_detail.latitude, lastEvent.location_detail.longitude);
+        }
+    }
+
+    // Event Listeners
+    nextEventBtn.addEventListener('click', generateNextEvent);
+    clearBtn.addEventListener('click', clearSession);
+    sendBtn.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+    sequenceSelect.addEventListener('change', function() {
+        loadUserProfile();
+        clearSession();
+    });
+    document.getElementById('edit-profile-btn').addEventListener('click', openModal);
+
+    // Functions
+    function updateMap(lat, lon) {
+        map.setView([lat, lon], 14);
+        if (currentMarker) {
+            map.removeLayer(currentMarker);
+        }
+        currentMarker = L.marker([lat, lon]).addTo(map);
+    }
+
+    function updateEventCounter() {
+        eventCounterBadge.textContent = `Events: ${eventCounter} / 10`;
+        if (eventCounter >= 10) {
+            nextEventBtn.disabled = true;
+            nextEventBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+                Max Events Reached
+            `;
+        }
+    }
+
+    function updateChatInputState() {
+        const hasEvents = eventCounter > 0;
+        chatInput.disabled = !hasEvents;
+        sendBtn.disabled = !hasEvents;
+        chatInput.placeholder = hasEvents ? 'Talk to the simulated user...' : 'Generate an event first...';
+    }
+
+    function addTimelineEvent(event, index) {
+        if (timelineContent.querySelector('.text-muted')) {
+            timelineContent.innerHTML = '';
+        }
+
+        const item = document.createElement('div');
+        item.className = 'timeline-item fade-in';
+        item.innerHTML = `
+            <div class="timeline-item-header">Event ${index} - ${event.time || 'N/A'}</div>
+            <div class="timeline-item-content">${event.event || 'No description'}</div>
+        `;
+        timelineContent.appendChild(item);
+        timelineContent.scrollTop = timelineContent.scrollHeight;
+    }
+
+    function addEventCard(event, index) {
+        if (welcomeMessage) {
+            welcomeMessage.style.display = 'none';
+        }
+
+        const card = document.createElement('div');
+        card.className = 'event-card fade-in';
+        card.innerHTML = `
+            <div class="event-card-header">
+                <span class="event-badge" style="background: linear-gradient(135deg, #10b981, #059669);">Event ${index}</span>
+                <h5>Generated Life Event</h5>
+            </div>
+            <div class="event-details">
+                <div class="event-detail">
+                    <span class="event-detail-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                    </span>
+                    <span class="event-detail-label">Time:</span>
+                    <span class="event-detail-value">${event.time || 'N/A'}</span>
+                </div>
+                <div class="event-detail">
+                    <span class="event-detail-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                            <circle cx="12" cy="10" r="3"/>
+                        </svg>
+                    </span>
+                    <span class="event-detail-label">Location:</span>
+                    <span class="event-detail-value">${event.location || 'N/A'}</span>
+                </div>
+                <div class="event-detail">
+                    <span class="event-detail-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 15a4 4 0 0 0 4 4h9a5 5 0 0 0 .5-9.99 7 7 0 0 0-13.4 3.48"/>
+                        </svg>
+                    </span>
+                    <span class="event-detail-label">Weather:</span>
+                    <span class="event-detail-value">${event.weather?.description || 'N/A'}</span>
+                </div>
+                <div class="event-detail">
+                    <span class="event-detail-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                    </span>
+                    <span class="event-detail-label">Event:</span>
+                    <span class="event-detail-value">${event.event || 'N/A'}</span>
+                </div>
+            </div>
+        `;
+        chatMessages.appendChild(card);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function addMessage(role, content) {
+        const isYou = role === 'user';
+        const msg = document.createElement('div');
+        msg.className = `message message-${isYou ? 'user' : 'assistant'} fade-in`;
+        msg.innerHTML = `
+            <div class="message-avatar">${isYou ? 'Y' : 'U'}</div>
+            <div class="message-content">${content}</div>
+        `;
+        chatMessages.appendChild(msg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function showTyping() {
+        const typing = document.createElement('div');
+        typing.id = 'typing-indicator';
+        typing.className = 'message message-assistant';
+        typing.innerHTML = `
+            <div class="message-avatar">U</div>
+            <div class="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        `;
+        chatMessages.appendChild(typing);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function hideTyping() {
+        const typing = document.getElementById('typing-indicator');
+        if (typing) typing.remove();
+    }
+
+    async function generateNextEvent() {
+        if (isGenerating || eventCounter >= 10) return;
+
+        isGenerating = true;
+        nextEventBtn.disabled = true;
+        nextEventBtn.innerHTML = `
+            <div class="spinner" style="width: 16px; height: 16px; border-width: 2px;"></div>
+            Generating...
+        `;
+
+        const sequenceId = document.getElementById('sequence-select').value;
+
+        try {
+            const response = await fetch('/api/generate-event', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sequence_id: sequenceId })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                const event = data.event;
+                eventCounter = data.event_index;
+                timelineEvents.push(event);
+
+                addEventCard(event, eventCounter);
+                addTimelineEvent(event, eventCounter);
+
+                if (event.location_detail) {
+                    updateMap(event.location_detail.latitude, event.location_detail.longitude);
+                }
+
+                updateEventCounter();
+                updateChatInputState();
+                showToast('Life event generated!', 'success');
+            } else {
+                showToast('Failed to generate event: ' + (data.error || 'Unknown error'), 'error');
+            }
+        } catch (error) {
+            showToast('Error: ' + error.message, 'error');
+        }
+
+        isGenerating = false;
+        if (eventCounter < 10) {
+            nextEventBtn.disabled = false;
+            nextEventBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <polyline points="19 12 12 19 5 12"/>
+                </svg>
+                Generate Next Event
+            `;
+        }
+    }
+
+    async function sendMessage() {
+        const message = chatInput.value.trim();
+        if (!message || isChatting || eventCounter === 0) return;
+
+        isChatting = true;
+        chatInput.value = '';
+        chatInput.disabled = true;
+        sendBtn.disabled = true;
+
+        addMessage('user', message);
+        showTyping();
+
+        const sequenceId = document.getElementById('sequence-select').value;
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: message,
+                    sequence_id: sequenceId
+                })
+            });
+
+            hideTyping();
+
+            const data = await response.json();
+
+            if (data.success) {
+                addMessage('assistant', data.response);
+            } else {
+                showToast('Failed to get response: ' + (data.error || 'Unknown error'), 'error');
+            }
+        } catch (error) {
+            hideTyping();
+            showToast('Error: ' + error.message, 'error');
+        }
+
+        isChatting = false;
+        chatInput.disabled = false;
+        sendBtn.disabled = false;
+        chatInput.focus();
+    }
+
+    async function clearSession() {
+        try {
+            await fetch('/api/clear-session', { method: 'POST' });
+
+            eventCounter = 0;
+            timelineEvents = [];
+
+            chatMessages.innerHTML = `
+                <div class="text-center text-muted p-4" id="welcome-message">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.5; margin-bottom: 1rem;">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <h5 class="text-muted">Ready to Start</h5>
+                    <p>Click "Generate Next Event" to create a life event, then chat with the simulated user.</p>
+                </div>
+            `;
+
+            timelineContent.innerHTML = `
+                <div class="text-center text-muted p-3">
+                    <p class="text-sm">No events yet. Generate an event to see timeline.</p>
+                </div>
+            `;
+
+            updateEventCounter();
+            updateChatInputState();
+
+            nextEventBtn.disabled = false;
+            nextEventBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <polyline points="19 12 12 19 5 12"/>
+                </svg>
+                Generate Next Event
+            `;
+
+            showToast('Session cleared', 'success');
+        } catch (error) {
+            showToast('Error clearing session', 'error');
+        }
+    }
+
+    async function loadUserProfile() {
+        const sequenceId = document.getElementById('sequence-select').value;
+
+        try {
+            const response = await fetch(`/api/user-profile/${sequenceId}`);
+            const data = await response.json();
+
+            if (data.success) {
+                updateProfileDisplay(data.user_profile);
+                updateEditForm(data.user_profile);
+            }
+        } catch (error) {
+            showToast('Error loading profile', 'error');
+        }
+    }
+
+    function updateProfileDisplay(profile) {
+        const container = document.getElementById('profile-container');
+        if (!profile) return;
+
+        container.innerHTML = `
+            <div class="profile-card">
+                <div class="profile-item">
+                    <span class="profile-label">Gender</span>
+                    <span class="profile-value">${profile.gender || 'N/A'}</span>
+                </div>
+                <div class="profile-item">
+                    <span class="profile-label">Age</span>
+                    <span class="profile-value">${profile.age || 'N/A'}</span>
+                </div>
+                <div class="profile-item">
+                    <span class="profile-label">Marital</span>
+                    <span class="profile-value">${profile.marital || 'N/A'}</span>
+                </div>
+                <div class="profile-item">
+                    <span class="profile-label">Area</span>
+                    <span class="profile-value">${profile.area || 'N/A'}</span>
+                </div>
+                <div class="profile-item">
+                    <span class="profile-label">Income</span>
+                    <span class="profile-value">${profile.income || 'N/A'}</span>
+                </div>
+                <div class="profile-item">
+                    <span class="profile-label">Employment</span>
+                    <span class="profile-value">${profile.employment || 'N/A'}</span>
+                </div>
+            </div>
+            ${profile.personality && profile.personality.length > 0 ? `
+            <div class="mb-3">
+                <span class="text-sm text-muted">Personality</span>
+                <div class="tag-list mt-1">
+                    ${profile.personality.map(t => `<span class="badge badge-primary">${t}</span>`).join('')}
+                </div>
+            </div>
+            ` : ''}
+            ${profile.preferences && profile.preferences.length > 0 ? `
+            <div class="mb-3">
+                <span class="text-sm text-muted">Preferences</span>
+                <div class="tag-list mt-1">
+                    ${profile.preferences.slice(0, 5).map(p => `<span class="badge badge-success">${p.substring(0, 30)}${p.length > 30 ? '...' : ''}</span>`).join('')}
+                </div>
+            </div>
+            ` : ''}
+        `;
+    }
+
+    function updateEditForm(profile) {
+        if (!profile) return;
+        document.getElementById('edit-user-id').value = profile.user_id || '';
+        document.getElementById('edit-gender').value = profile.gender || '';
+        document.getElementById('edit-age').value = profile.age || '';
+        document.getElementById('edit-marital').value = profile.marital || '';
+        document.getElementById('edit-area').value = profile.area || '';
+        document.getElementById('edit-income').value = profile.income || '';
+        document.getElementById('edit-employment').value = profile.employment || '';
+        document.getElementById('edit-personality').value = (profile.personality || []).join(', ');
+        document.getElementById('edit-preferences').value = (profile.preferences || []).join('\n');
+    }
+
+    function openModal() {
+        document.getElementById('profile-modal').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('profile-modal').classList.remove('active');
+    }
+
+    async function saveProfile() {
+        const profile = {
+            user_id: document.getElementById('edit-user-id').value,
+            gender: document.getElementById('edit-gender').value,
+            age: document.getElementById('edit-age').value,
+            marital: document.getElementById('edit-marital').value,
+            area: document.getElementById('edit-area').value,
+            income: document.getElementById('edit-income').value,
+            employment: document.getElementById('edit-employment').value,
+            personality: document.getElementById('edit-personality').value.split(',').map(s => s.trim()).filter(s => s),
+            preferences: document.getElementById('edit-preferences').value.split('\n').map(s => s.trim()).filter(s => s)
+        };
+
+        try {
+            const response = await fetch('/api/save-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(profile)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                updateProfileDisplay(profile);
+                closeModal();
+                showToast('Profile saved successfully!', 'success');
+            } else {
+                showToast('Failed to save profile: ' + data.error, 'error');
+            }
+        } catch (error) {
+            showToast('Error saving profile', 'error');
+        }
+    }
+
+    // Close modal on outside click
+    document.getElementById('profile-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+</script>
+{% endblock %}
