@@ -476,9 +476,13 @@
         const isYou = role === 'user';
         const msg = document.createElement('div');
         msg.className = `message message-${isYou ? 'user' : 'assistant'} fade-in`;
+
+        // Render markdown content
+        const renderedContent = typeof marked !== 'undefined' ? marked.parse(content) : content;
+
         msg.innerHTML = `
             <div class="message-avatar">${isYou ? 'Y' : 'U'}</div>
-            <div class="message-content">${content}</div>
+            <div class="message-content markdown-body">${renderedContent}</div>
         `;
         chatMessages.appendChild(msg);
         chatMessages.scrollTop = chatMessages.scrollHeight;
