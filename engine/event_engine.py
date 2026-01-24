@@ -284,62 +284,53 @@ class OnlineLifeEventEngine:
         similar_events = self.retriever.search(query=query, top_k=top_k)
         similar_events = [e['data'] for e in similar_events]
         return similar_events
-    
-    def generate_event(self):
-        event = self.main_events['events'][self.event_index]
-        formatted_event = POI_Event.from_dict(event, timezone=None)
-        event['dialogue_scene'] = '\n'.join([formatted_event.desc_time(), formatted_event.desc_location(), formatted_event.desc_weather()])
-        if not event['life_event']:
-            event['life_event'] = event['event']
-        self.event_index += 1
-        return event
 
-    # def generate_event(self, user_profile, user_belief = '', history_events = []):
-    #     pre_events = [x['event'] for x in history_events]
+    def generate_event(self, user_profile, user_belief = '', history_events = []):
+        pre_events = [x['event'] for x in history_events]
         
-    #     environment = self.generate_environment()
+        environment = self.generate_environment()
         
-    #     dimensions = list(self.event_dimensions.keys())
-    #     all_candidate_events = []
-    #     event_context = self.get_event_context(history_events)
-    #     for dimension in dimensions:
-    #         query = self.generate_query_by_dimension(
-    #             user_profile,
-    #             event_context, 
-    #             environment,
-    #             dimension,
-    #         )
+        dimensions = list(self.event_dimensions.keys())
+        all_candidate_events = []
+        event_context = self.get_event_context(history_events)
+        for dimension in dimensions:
+            query = self.generate_query_by_dimension(
+                user_profile,
+                event_context, 
+                environment,
+                dimension,
+            )
             
-    #         similar_events = self.retrieve_similar_events(query, top_k=3)
-    #         all_candidate_events.extend(similar_events)
+            similar_events = self.retrieve_similar_events(query, top_k=3)
+            all_candidate_events.extend(similar_events)
                 
-    #         if all_candidate_events:
-    #             all_candidate_events = [x for x in all_candidate_events if x['event'] not in pre_events]
+            if all_candidate_events:
+                all_candidate_events = [x for x in all_candidate_events if x['event'] not in pre_events]
 
-    #             reranked_events = self.rerank_events(
-    #                 all_candidate_events,
-    #                 user_profile=user_profile,
-    #                 location_desc=location_point.desc(keys_to_drop=['life_event', 'intent']),
-    #                 event_context=event_context,
-    #                 goal=goal,
-    #                 n_keep=1
-    #             )
+                reranked_events = self.rerank_events(
+                    all_candidate_events,
+                    user_profile=user_profile,
+                    location_desc=location_point.desc(keys_to_drop=['life_event', 'intent']),
+                    event_context=event_context,
+                    goal=goal,
+                    n_keep=1
+                )
                 
-    #             selected_event = self.softmax_sampling(reranked_events)
+                selected_event = self.softmax_sampling(reranked_events)
                 
-    #             if selected_event:
-    #                 pre_locations.add(location_point.location)
-    #                 pre_events.add(selected_event['event'])
+                if selected_event:
+                    pre_locations.add(location_point.location)
+                    pre_events.add(selected_event['event'])
 
-    #                 selected_event = self.rewrite_event(
-    #                     user_profile=user_profile, 
-    #                     location_desc=location_point.desc(keys_to_drop=['life_event', 'intent']),
-    #                     event_context=event_context, 
-    #                     selected_event=selected_event,
-    #                     goal=goal
-    #                 )
+                    selected_event = self.rewrite_event(
+                        user_profile=user_profile, 
+                        location_desc=location_point.desc(keys_to_drop=['life_event', 'intent']),
+                        event_context=event_context, 
+                        selected_event=selected_event,
+                        goal=goal
+                    )
         
-    #     return event
+        return event
 
 class TrajectoryEventMatcher:
     def __init__(self, event_database: List[Dict], retriever, model, theme: str, theme_tags: List[str], logger_silent: bool = False):
