@@ -816,6 +816,18 @@ textarea.form-control {
 .text-warning { color: var(--warning-color); }
 .text-danger { color: var(--danger-color); }
 .text-muted { color: var(--gray-500); }
+
+/* Emotion label in chat messages */
+.emotion-label {
+    color: var(--primary-color);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0.125rem 0.5rem;
+    background: var(--primary-light);
+    border-radius: var(--radius-sm);
+    display: inline-block;
+    margin-bottom: 0.5rem;
+}
 .text-sm { font-size: 0.875rem; }
 .text-xs { font-size: 0.75rem; }
 

@@ -395,7 +395,7 @@
         msg.innerHTML = `
             <div class="message-avatar">${isUser ? 'U' : 'A'}</div>
             <div class="message-content">
-                ${emotion ? `<div class="text-xs text-muted mb-1"><em>Emotion: ${emotion}</em></div>` : ''}
+                ${emotion ? `<span class="emotion-label">Emotion: ${emotion}</span>` : ''}
                 ${content}
             </div>
         `;
