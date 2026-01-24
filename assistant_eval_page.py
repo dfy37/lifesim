@@ -465,7 +465,7 @@ def run_simulation(main_area_render, map_render, timeline_render, sequence_id, n
     callback = create_streamlit_callback(main_area_render, map_render, timeline_render)
 
     exp_name = f"{sequence_id}_{str(n_exp)}"
-    sim = build_simulator(callback, exp_name, config_path='./config.yaml', assistant_model=assistant_model)
+    sim = build_simulator(callback, exp_name, config_path='/remote-home/fyduan/secrets/config.yaml', assistant_model_name=assistant_model)
     st.session_state["simulator"] = sim
 
     sim_config = {
@@ -508,7 +508,7 @@ def create_layout():
 
 def render_assistant_eval_page():
     # 加载配置
-    cfg = load_config('./config.yaml')
+    cfg = load_config('/remote-home/fyduan/secrets/config.yaml')
     
     # 初始化状态
     init_simulation()

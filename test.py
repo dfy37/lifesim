@@ -350,19 +350,19 @@ def build_retriever_config(name, idx, retriever_cfg):
     }
 
 EVENT_POOL_PATH = {
-    'elderlycare': '/remote-home/fyduan/data_crawl/event_pool/elderlycare_intent/event_pool/elderlycare_event_with_keywords.jsonl',
-    'sport_health': '/remote-home/fyduan/data_crawl/event_pool/sport_health_intent/event_pool/sport_health_events_v2.jsonl',
-    'travel': '/remote-home/fyduan/data_crawl/event_pool/travel_intent/event_pool/travel_events_v2.jsonl',
-    'mental_health': '/remote-home/fyduan/data_crawl/event_pool/mental_health_intent/event_pool/mental_health_event.jsonl',
-    'education': '/remote-home/fyduan/data_crawl/event_pool/education_intent/event_pool/education_events_v2.jsonl',
-    'childcare': '/remote-home/fyduan/data_crawl/event_pool/childcare_intent/event_pool/childcare_events_v2.jsonl',
-    'dining': '/remote-home/fyduan/data_crawl/event_pool/dining_intent/event_pool/dining_events_v2.jsonl',
-    'entertainment': '/remote-home/fyduan/data_crawl/event_pool/entertainment_intent/event_pool/entertainment_event_with_keywords.jsonl'
+    'elderlycare': '/remote-home/fyduan/event_pool/elderlycare_event_with_keywords.jsonl',
+    'sport_health': '/remote-home/fyduan/event_pool/sport_health_events_v2.jsonl',
+    'travel': '/remote-home/fyduan/event_pool/travel_events_v2.jsonl',
+    'mental_health': '/remote-home/fyduan/event_pool/mental_health_event.jsonl',
+    'education': '/remote-home/fyduan/event_pool/education_events_v2.jsonl',
+    'childcare': '/remote-home/fyduan/event_pool/childcare_events_v2.jsonl',
+    'dining': '/remote-home/fyduan/event_pool/dining_events_v2.jsonl',
+    'entertainment': '/remote-home/fyduan/event_pool/entertainment_event_with_keywords.jsonl'
 }
 
 def render_chat_page():
     # 加载配置
-    cfg = load_config('./config.yaml')
+    cfg = load_config('/remote-home/fyduan/secrets/config.yaml')
     
     # 初始化状态
     init_simulation()
@@ -420,20 +420,20 @@ def render_chat_page():
 
     theme = '_'.join(sequence_id.split('NYC_')[-1].split('TKY_')[-1].split('_')[:-1])
     event_retriever = DenseRetriever(
-        model_name="/remote-home/share/fyduan_share/MODELS/Qwen3-Embedding-0.6B",
+        model_name="/remote-home/fyduan/MODELS/Qwen3-Embedding-0.6B",
         collection_name=f"trajectory_{theme}_event_collection",
         embedding_dim=1024,
         persist_directory="./chroma_db",
         distance_function="cosine",
         use_custom_embeddings=False,
-        device='cpu'
+        device='cuda:7'
     )
     event_database = load_jsonl_data(EVENT_POOL_PATH[theme])
     if event_retriever.is_collection_empty():
         logger.info("Collection is empty, building index...")
         event_retriever.build_index(event_database, text_field="event", id_field="id", batch_size=128)
     
-    retriever_cfg = cfg["simulator"]["user_retriever"]
+    retriever_cfg = cfg["retriever"]
     user_retriever_cfg = build_retriever_config(
         f"user_memory", 0, retriever_cfg
     )

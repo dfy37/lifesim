@@ -91,6 +91,11 @@ USER_EMOTION_PROMPT = """Based on the user's profile, memory perception, and the
 {emotion_options}
 
 ### Requirements
+- Emotions should reflect the user's feelings about the assistant's previous response.
+- The first line of the conversation shall carry a neutral emotion.
+- If the assistant's response runs counter to the user's preferences, a negative emotion shall be expressed.
+- If the assistant's suggestions are difficult for the user to implement given their current physical state, a negative emotion shall be expressed.
+- If the assistant's suggestions go against the user's implicit intentions, a negative emotion shall be expressed.
 - Output in the following JSON format, enclosed between ```json and ```:
 ```json
 {{

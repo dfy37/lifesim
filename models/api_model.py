@@ -25,7 +25,9 @@ class APIModel:
                 messages1 = messages.copy()
                 messages1.append({"role": "assistant", "content": response_content})
                 self.messages.append(messages1)
+                break
             except Exception as e:
+                self.logger.error(f"Error occurred during API call: {e}")
                 if attempt == max_retries - 1:  # Last attempt
                     self.logger.error(f"Error occurred after {max_retries} attempts: {e}")
                     response_content = ""

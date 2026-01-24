@@ -1,0 +1,330 @@
+{
+  "event_sequence_info": {
+    "user_id": 234857083,
+    "sequence_id": "234857083_13_NYC_sport_health_5",
+    "theme": "sport_health",
+    "longterm_goal": "Build a daily pre‑ and post‑aerial‑yoga routine—including secure non‑slip apparel, individualized hydration, targeted warm‑up and mobility work, and injury‑prevention/recovery actions—to safely sustain at least three yoga sessions per week."
+  },
+  "dialogue_log": [
+    {
+      "user": {
+        "profile": {
+          "user_id": 234857083,
+          "religious": "No religion",
+          "employment": "Working now",
+          "marital": "Never married",
+          "race": null,
+          "income": "Middle Income",
+          "area": "Cities",
+          "age": "Youth (18-35 years old)",
+          "gender": "Female",
+          "bigfive": null,
+          "personality": [
+            "emotionally stable",
+            "Calm"
+          ],
+          "preferences": [
+            "Have very high requirements for the living environment, paying attention to location, surrounding facilities, quietness, and comfort, and will spend a lot of effort screening and creating an ideal home.",
+            "Places extreme importance on personal safety, remains highly vigilant about potential dangers, and proactively takes various protective measures to avoid any safety risks.",
+            "Not very concerned about environmental safety issues, rarely actively assess risks, lack sensitivity to potential dangers, and have strong adaptability.",
+            "No obvious preference for specific knowledge areas; learning content is determined by circumstances, without deliberately pursuing or avoiding knowledge in particular fields.",
+            "Requires less autonomy, is easy to accept others' opinions or rely on external decisions, shows less insistence on one's own views, is adaptable and willing to comply.",
+            "A strong desire to establish close and loyal relationships, striving to please others in order to gain friendship and attention, placing great importance on interpersonal relationships."
+          ],
+          "preferences_value": null
+        },
+        "profile_str": "Female, Youth (18-35 years old), Never married, no religious affiliation, usually resides in Cities. the income level is Middle Income, Working now. Personality traits include: emotionally stable、Calm. Preferences expressed in daily life and interactions include: Have very high requirements for the living environment, paying attention to location, surrounding facilities, quietness, and comfort, and will spend a lot of effort screening and creating an ideal home. Places extreme importance on personal safety, remains highly vigilant about potential dangers, and proactively takes various protective measures to avoid any safety risks. Not very concerned about environmental safety issues, rarely actively assess risks, lack sensitivity to potential dangers, and have strong adaptability. No obvious preference for specific knowledge areas; learning content is determined by circumstances, without deliberately pursuing or avoiding knowledge in particular fields. Requires less autonomy, is easy to accept others' opinions or rely on external decisions, shows less insistence on one's own views, is adaptable and willing to comply. A strong desire to establish close and loyal relationships, striving to please others in order to gain friendship and attention, placing great importance on interpersonal relationships."
+      },
+      "event": {
+        "keywords": "['Health and Medical Science', 'Exercise Science and Physical Training', 'Interdisciplinary Studies and the Human Knowledge System']",
+        "event": "During an aerial‑yoga session in the community fitness center studio on a cloudy Saturday afternoon, my loose tank top slid during an inversion, leaving me embarrassed.",
+        "location": "Community Fitness Center",
+        "time": "2012-10-27 13:22:17, Saturday",
+        "intent": "Please recommend secure, non‑slip workout apparel suitable for aerial yoga and inversion poses to prevent wardrobe mishaps.",
+        "weather": {
+          "datetime": "2012-10-27",
+          "datetimeEpoch": 1351310400,
+          "tempmax": 16.7,
+          "tempmin": 11.6,
+          "temp": 14.2,
+          "feelslikemax": 16.7,
+          "feelslikemin": 11.6,
+          "feelslike": 14.2,
+          "dew": 11.1,
+          "humidity": 82.1,
+          "precip": 0.0,
+          "precipprob": 0.0,
+          "precipcover": 0.0,
+          "preciptype": null,
+          "snow": 0.0,
+          "snowdepth": 0.0,
+          "windgust": null,
+          "windspeed": 12.5,
+          "winddir": 135.4,
+          "pressure": 1017.3,
+          "cloudcover": 93.2,
+          "visibility": 13.9,
+          "solarradiation": null,
+          "solarenergy": null,
+          "uvindex": null,
+          "sunrise": "07:23:10",
+          "sunriseEpoch": 1351336990,
+          "sunset": "17:53:50",
+          "sunsetEpoch": 1351374830,
+          "moonphase": 0.42,
+          "conditions": "Overcast",
+          "description": "Cloudy skies throughout the day.",
+          "icon": "cloudy",
+          "stations": [
+            "72518014735",
+            "KPSF",
+            "74410414763",
+            "72507554768",
+            "KALB",
+            "KAQW"
+          ],
+          "source": "obs"
+        },
+        "life_event": "During an aerial‑yoga session in the community fitness center studio on a cloudy Saturday afternoon, my loose tank top slid during an inversion, leaving me embarrassed.",
+        "location_detail": {
+          "latitude": 40.91124844,
+          "longitude": -73.90751034
+        },
+        "timestamp": "2012-10-27 17:22:17",
+        "sub_intents": [
+          {
+            "description": "Wants secure clothing to prevent exposure during aerial yoga sessions.",
+            "type": "explicit"
+          },
+          {
+            "description": "Seeks apparel that ensures comfort and safety during inversion poses.",
+            "type": "implicit"
+          },
+          {
+            "description": "Hopes to avoid future embarrassment caused by wardrobe issues.",
+            "type": "implicit"
+          },
+          {
+            "description": "Desires expert recommendations for reliable workout gear.",
+            "type": "explicit"
+          },
+          {
+            "description": "Aims to improve her understanding of suitable attire for aerial yoga.",
+            "type": "implicit"
+          }
+        ],
+        "dialogue_scene": "The time is 2012-10-27 13:22:17, Saturday\nThe location is Community Fitness Center\nThe weather condition is Cloudy skies throughout the day."
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "I've been getting more into aerial yoga lately, but I keep having issues with my clothes slipping during inversions. Do you have any recommendations for workout wear that stays put?",
+          "emotion": "neutral",
+          "memory_similarity": -1
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "emotion": null,
+          "memory_similarity": null
+        },
+        {
+          "role": "user",
+          "content": "What type of clothing do you usually wear for these sessions? Knowing that might help me suggest something more suitable.",
+          "emotion": "neutral",
+          "memory_similarity": -1
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "emotion": null,
+          "memory_similarity": null
+        },
+        {
+          "role": "user",
+          "content": "I usually go for loose tank tops and regular yoga pants, but they don't seem to work well for inversions.",
+          "emotion": "neutral",
+          "memory_similarity": -1
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "emotion": null,
+          "memory_similarity": null
+        },
+        {
+          "role": "user",
+          "content": "For aerial yoga, you might want to try fitted tops with silicone grip strips inside or high-waisted leggings that won't slide down. Brands like Lululemon or Athleta often have styles designed for inversions.",
+          "emotion": "neutral",
+          "memory_similarity": -1
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "emotion": null,
+          "memory_similarity": null
+        }
+      ],
+      "analysis": [],
+      "dropout": {},
+      "pre_profile": null,
+      "enable_turn_analysis": false
+    },
+    {
+      "user": {
+        "profile": {
+          "user_id": 234857083,
+          "religious": "No religion",
+          "employment": "Working now",
+          "marital": "Never married",
+          "race": null,
+          "income": "Middle Income",
+          "area": "Cities",
+          "age": "Youth (18-35 years old)",
+          "gender": "Female",
+          "bigfive": null,
+          "personality": [
+            "emotionally stable",
+            "Calm"
+          ],
+          "preferences": [
+            "Have very high requirements for the living environment, paying attention to location, surrounding facilities, quietness, and comfort, and will spend a lot of effort screening and creating an ideal home.",
+            "Places extreme importance on personal safety, remains highly vigilant about potential dangers, and proactively takes various protective measures to avoid any safety risks.",
+            "Not very concerned about environmental safety issues, rarely actively assess risks, lack sensitivity to potential dangers, and have strong adaptability.",
+            "No obvious preference for specific knowledge areas; learning content is determined by circumstances, without deliberately pursuing or avoiding knowledge in particular fields.",
+            "Requires less autonomy, is easy to accept others' opinions or rely on external decisions, shows less insistence on one's own views, is adaptable and willing to comply.",
+            "A strong desire to establish close and loyal relationships, striving to please others in order to gain friendship and attention, placing great importance on interpersonal relationships."
+          ],
+          "preferences_value": null
+        },
+        "profile_str": "Female, Youth (18-35 years old), Never married, no religious affiliation, usually resides in Cities. the income level is Middle Income, Working now. Personality traits include: emotionally stable、Calm. Preferences expressed in daily life and interactions include: Have very high requirements for the living environment, paying attention to location, surrounding facilities, quietness, and comfort, and will spend a lot of effort screening and creating an ideal home. Places extreme importance on personal safety, remains highly vigilant about potential dangers, and proactively takes various protective measures to avoid any safety risks. Not very concerned about environmental safety issues, rarely actively assess risks, lack sensitivity to potential dangers, and have strong adaptability. No obvious preference for specific knowledge areas; learning content is determined by circumstances, without deliberately pursuing or avoiding knowledge in particular fields. Requires less autonomy, is easy to accept others' opinions or rely on external decisions, shows less insistence on one's own views, is adaptable and willing to comply. A strong desire to establish close and loyal relationships, striving to please others in order to gain friendship and attention, placing great importance on interpersonal relationships."
+      },
+      "event": {
+        "event": "On a breezy Sunday afternoon at the city park, I went for a short jog as cross‑training between studio days. While navigating a patch of uneven gravel, I lightly twisted my right ankle and felt mild pain.",
+        "time": "2012-10-28 13:18:40, Sunday",
+        "keywords": "['Exercise Science and Physical Training', 'Interdisciplinary Studies and the Human Knowledge System']",
+        "intent": "I’d like quick tips to ease the ankle discomfort and to adjust my running stride so I stay safe on irregular surfaces.",
+        "location": "City Park",
+        "weather": {
+          "datetime": "2012-10-28",
+          "datetimeEpoch": 1351396800,
+          "tempmax": 15.4,
+          "tempmin": 10.0,
+          "temp": 12.5,
+          "feelslikemax": 15.4,
+          "feelslikemin": 10.0,
+          "feelslike": 12.5,
+          "dew": 7.8,
+          "humidity": 74.8,
+          "precip": 0.0,
+          "precipprob": 0.0,
+          "precipcover": 0.0,
+          "preciptype": null,
+          "snow": 0.0,
+          "snowdepth": 0.0,
+          "windgust": 33.5,
+          "windspeed": 18.2,
+          "winddir": 43.9,
+          "pressure": 1013.5,
+          "cloudcover": 93.1,
+          "visibility": 15.9,
+          "solarradiation": null,
+          "solarenergy": null,
+          "uvindex": null,
+          "sunrise": "07:24:25",
+          "sunriseEpoch": 1351423465,
+          "sunset": "17:52:27",
+          "sunsetEpoch": 1351461147,
+          "moonphase": 0.46,
+          "conditions": "Overcast",
+          "description": "Cloudy skies throughout the day.",
+          "icon": "cloudy",
+          "stations": [
+            "72518014735",
+            "KPSF",
+            "74410414763",
+            "72507554768",
+            "KALB",
+            "KAQW"
+          ],
+          "source": "obs"
+        },
+        "life_event": "On a breezy Sunday afternoon at the city park, I went for a short jog as cross‑training between studio days. While navigating a patch of uneven gravel, I lightly twisted my right ankle and felt mild pain.",
+        "location_detail": {
+          "latitude": 40.78782019,
+          "longitude": -73.79104614
+        },
+        "timestamp": "2012-10-28 17:18:40",
+        "sub_intents": [
+          {
+            "description": "Seeks quick remedies to alleviate current ankle discomfort.",
+            "type": "explicit"
+          },
+          {
+            "description": "Wants guidance on modifying running techniques for better safety on uneven terrain.",
+            "type": "explicit"
+          },
+          {
+            "description": "Aims to understand methods to prevent similar ankle injuries while jogging in the future.",
+            "type": "implicit"
+          }
+        ],
+        "dialogue_scene": "The time is 2012-10-28 13:18:40, Sunday\nThe location is City Park\nThe weather condition is Cloudy skies throughout the day."
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Those sound like good options. Could you tell me which specific models from those brands are known for being secure during inversions?",
+          "emotion": "neutral",
+          "memory_similarity": -1
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "emotion": null,
+          "memory_similarity": null
+        },
+        {
+          "role": "user",
+          "content": "For Lululemon, the Align High-Rise Pant is popular for its secure waistband, and the Wunder Train line has good grip. Athleta’s Salutation Stash Pocket Tight and Elation Tight are also well-reviewed for staying in place during inversions.",
+          "emotion": "neutral",
+          "memory_similarity": -1
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "emotion": null,
+          "memory_similarity": null
+        },
+        {
+          "role": "user",
+          "content": "Do those have any special features to prevent slipping, like silicone grips or extra secure seams?",
+          "emotion": "neutral",
+          "memory_similarity": -1
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "emotion": null,
+          "memory_similarity": null
+        },
+        {
+          "role": "user",
+          "content": "Yes, many of them do. The Wunder Train tights have a drawcord waistband and sweat-wicking fabric that helps them stay put, while Athleta's Powervita fabric in the Elation Tight offers good compression and a wide, non-roll waistband. It's often best to check the product description for terms like \"grip,\" \"stay-put,\" or \"no-slip\" technology, and if possible, try them on to ensure a snug, secure fit.",
+          "emotion": "neutral",
+          "memory_similarity": -1
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "emotion": null,
+          "memory_similarity": null
+        }
+      ],
+      "analysis": [],
+      "dropout": {},
+      "pre_profile": null,
+      "enable_turn_analysis": false
+    }
+  ]
+}

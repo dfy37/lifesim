@@ -26,28 +26,9 @@ def build_retriever_config(name, idx, retriever_cfg):
     }
 
 
-MODEL_CFGS = {
-    "deepseek-chat": {
-        "model_path": "deepseek-chat",
-        "base_url": "https://api.deepseek.com",
-        "api_key": "sk-785db80201014ade891d1db0525e48fd",
-        "vllmapi": False
-    },
-    "gpt-5-mini": {
-        "model_path": "gpt-5-mini",
-        "base_url": "https://api.ai-gaochao.cn/v1",
-        "api_key": "sk-6xTnWH3vmE0MzXtlC163036b040546Fd92914105Fc74359e",
-        "vllmapi": False,
-    },
-    "gpt-4o": {
-        "model_path": "gpt-4o",
-        "base_url": "https://api.ai-gaochao.cn/v1",
-        "api_key": "sk-6xTnWH3vmE0MzXtlC163036b040546Fd92914105Fc74359e",
-        "vllmapi": False,
-    }
-}
+MODEL_CFGS = json.load(open('/remote-home/fyduan/secrets/model_cfgs.json'))
 
-def build_simulator(on_turn_update, exp_name, config_path="config.yaml", assistant_model=None):
+def build_simulator(on_turn_update, exp_name, config_path="config.yaml", assistant_model_name=None):
     cfg = load_config(config_path)
 
     # MODEL PATHS
@@ -59,8 +40,9 @@ def build_simulator(on_turn_update, exp_name, config_path="config.yaml", assista
     assistant_model_name = os.path.basename(asst_m_cfg["model_path"])
     analysis_model_name = os.path.basename(analysis_m_cfg["model_path"])
 
-    if assistant_model:
-        asst_m_cfg = MODEL_CFGS.get(assistant_model, asst_m_cfg)
+    if assistant_model_name:
+        assistant_model_name = assistant_model_name
+        asst_m_cfg = MODEL_CFGS.get(assistant_model_name, asst_m_cfg)
 
     user_model = load_model(
         model_name=user_model_name,
@@ -80,12 +62,14 @@ def build_simulator(on_turn_update, exp_name, config_path="config.yaml", assista
         reason=False,
     )
 
+    print(assistant_model)
+
     analysis_model = load_model(
         model_name=analysis_model_name,
-        api_key=asst_m_cfg["api_key"],
-        model_path=asst_m_cfg["model_path"],
-        base_url=asst_m_cfg["base_url"],
-        vllmapi=asst_m_cfg["vllmapi"],
+        api_key=user_m_cfg["api_key"],
+        model_path=user_m_cfg["model_path"],
+        base_url=user_m_cfg["base_url"],
+        vllmapi=user_m_cfg["vllmapi"],
         reason=False,
     )
 
