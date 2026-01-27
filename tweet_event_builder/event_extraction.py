@@ -81,8 +81,8 @@ def _parse_event_json(text: str) -> Event:
 
 
 class EventExtractor:
-    def __init__(self, model: str, api_key: str | None = None):
-        self.client = OpenAI(api_key=api_key)
+    def __init__(self, model: str, api_key: str | None = None, base_url: str | None = None) -> None:
+        self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.model = model
 
     def extract(self, tweet_text: str, tweet_time: str | None) -> Event:
@@ -200,9 +200,10 @@ def main() -> None:
     parser.add_argument("--user-col", default="user_id")
     parser.add_argument("--id-col", default="id")
     parser.add_argument("--api-key", default=None)
+    parser.add_argument("--base-url", default=None)
     args = parser.parse_args()
 
-    extractor = EventExtractor(model=args.model, api_key=args.api_key)
+    extractor = EventExtractor(model=args.model, api_key=args.api_key, base_url=args.base_url)
     args.output_root.mkdir(parents=True, exist_ok=True)
 
     for bucket_id, parquet_path in iter_bucket_parquets(args.input_root):
