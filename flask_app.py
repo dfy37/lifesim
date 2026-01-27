@@ -391,16 +391,7 @@ def generate_event():
             reason=False,
         )
 
-        EVENT_POOL_PATH = {
-            'elderlycare': '/remote-home/fyduan/event_pool_en/elderlycare_events.jsonl',
-            'sport_health': '/remote-home/fyduan/event_pool_en/sport_health_events.jsonl',
-            'travel': '/remote-home/fyduan/event_pool_en/travel_events.jsonl',
-            'mental_health': '/remote-home/fyduan/event_pool_en/mental_health_events.jsonl',
-            'education': '/remote-home/fyduan/event_pool_en/education_events.jsonl',
-            'childcare': '/remote-home/fyduan/event_pool_en/childcare_events.jsonl',
-            'dining': '/remote-home/fyduan/event_pool_en/dining_events.jsonl',
-            'entertainment': '/remote-home/fyduan/event_pool_en/entertainment_events.jsonl'
-        }
+        EVENT_POOL_PATH = json.load(open('/remote-home/fyduan/user_simulation/secrets/events_pool_cfgs.json'))
 
         theme = '_'.join(sequence_id.split('NYC_')[-1].split('TKY_')[-1].split('_')[:-1])
 

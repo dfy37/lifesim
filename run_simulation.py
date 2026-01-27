@@ -26,7 +26,7 @@ def build_retriever_config(name, idx, retriever_cfg):
     }
 
 
-MODEL_CFGS = json.load(open('/remote-home/fyduan/secrets/model_cfgs.json'))
+MODEL_CFGS = json.load(open('/remote-home/fyduan/user_simulation/secrets/model_cfgs.json'))
 
 def build_simulator(on_turn_update, exp_name, config_path="config.yaml", assistant_model_name=None):
     cfg = load_config(config_path)

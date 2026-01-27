@@ -1,4 +1,1 @@
-rm -r ./chromadb
-
-streamlit run app.py --server.port 8503
-# streamlit run assistant_eval_page.py --server.port 8503
+python flask_app.py --config /remote-home/fyduan/user_simulation/secrets/config.yaml
