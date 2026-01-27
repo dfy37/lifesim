@@ -7,6 +7,7 @@ import json
 import yaml
 import time
 import uuid
+import argparse
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, session, Response
 from flask_cors import CORS
@@ -16,6 +17,9 @@ import threading
 from utils.utils import get_logger
 
 logger = get_logger(__name__)
+
+# Global configuration path (set via command line arguments)
+CONFIG_PATH = "config.yaml"
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -85,7 +89,7 @@ def assistant_eval():
 
     # Try to load config and data
     try:
-        cfg = load_config('/remote-home/fyduan/secrets/config.yaml')
+        cfg = load_config(CONFIG_PATH)
         events = load_jsonl_data(cfg["paths"]["events_path"])
         users = load_jsonl_data(cfg["paths"]["users_path"])
 
@@ -133,7 +137,7 @@ def user_life():
     sim_session = get_or_create_session()
 
     try:
-        cfg = load_config('/remote-home/fyduan/secrets/config.yaml')
+        cfg = load_config(CONFIG_PATH)
         events = load_jsonl_data(cfg["paths"]["events_path"])
         users = load_jsonl_data(cfg["paths"]["users_path"])
 
@@ -177,7 +181,7 @@ def user_life():
 def get_user_profile(sequence_id):
     """Get user profile by sequence ID"""
     try:
-        cfg = load_config('/remote-home/fyduan/secrets/config.yaml')
+        cfg = load_config(CONFIG_PATH)
         events = load_jsonl_data(cfg["paths"]["events_path"])
         users = load_jsonl_data(cfg["paths"]["users_path"])
 
@@ -202,7 +206,7 @@ def save_profile():
     """Save user profile"""
     try:
         data = request.json
-        cfg = load_config('/remote-home/fyduan/secrets/config.yaml')
+        cfg = load_config(CONFIG_PATH)
         users_path = cfg["paths"]["users_path"]
 
         users = load_jsonl_data(users_path)
@@ -244,7 +248,7 @@ def start_simulation():
 
         exp_name = f"{sequence_id}_{int(time.time())}"
         sim = build_simulator(callback, exp_name,
-                            config_path='/remote-home/fyduan/secrets/config.yaml',
+                            config_path=CONFIG_PATH,
                             assistant_model_name=assistant_model)
 
         sim_config = {
@@ -298,7 +302,7 @@ def stream_simulation():
 
                 exp_name = f"{sequence_id}_{int(time.time())}"
                 sim = build_simulator(callback, exp_name,
-                                    config_path='/remote-home/fyduan/secrets/config.yaml',
+                                    config_path=CONFIG_PATH,
                                     assistant_model_name=assistant_model)
 
                 sim_config = {
@@ -360,7 +364,7 @@ def generate_event():
         data = request.json
         sequence_id = data.get('sequence_id')
 
-        cfg = load_config('/remote-home/fyduan/secrets/config.yaml')
+        cfg = load_config(CONFIG_PATH)
         events = load_jsonl_data(cfg["paths"]["events_path"])
         users = load_jsonl_data(cfg["paths"]["users_path"])
 
@@ -450,7 +454,7 @@ def chat():
         if not message:
             return jsonify({'success': False, 'error': 'No message provided'})
 
-        cfg = load_config('/remote-home/fyduan/secrets/config.yaml')
+        cfg = load_config(CONFIG_PATH)
         events = load_jsonl_data(cfg["paths"]["events_path"])
         users = load_jsonl_data(cfg["paths"]["users_path"])
 
@@ -538,5 +542,38 @@ def clear_session():
 
     return jsonify({'success': True})
 
+def parse_args():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(description='LifeSim Demo - Flask Application')
+    parser.add_argument(
+        '--config', '-c',
+        type=str,
+        default='config.yaml',
+        help='Path to the configuration YAML file (default: config.yaml)'
+    )
+    parser.add_argument(
+        '--host',
+        type=str,
+        default='0.0.0.0',
+        help='Host to run the server on (default: 0.0.0.0)'
+    )
+    parser.add_argument(
+        '--port', '-p',
+        type=int,
+        default=5000,
+        help='Port to run the server on (default: 5000)'
+    )
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        default=True,
+        help='Run in debug mode (default: True)'
+    )
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    args = parse_args()
+    CONFIG_PATH = args.config
+    logger.info(f"Using config file: {CONFIG_PATH}")
+    app.run(host=args.host, port=args.port, debug=args.debug)
