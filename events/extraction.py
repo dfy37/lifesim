@@ -83,8 +83,8 @@ def _parse_event_json(text: str) -> Event:
 
 
 class EventExtractor:
-    def __init__(self, model: str, api_key: str | None = None):
-        self.client = OpenAI(api_key=api_key)
+    def __init__(self, model: str, api_key: str | None = None, base_url: str | None = None) -> None:
+        self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.model = model
 
     def extract(self, tweet_text: str, tweet_time: str | None) -> Event:
@@ -99,7 +99,7 @@ class EventExtractor:
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.2,
+            temperature=1.0,
         )
         event = _parse_event_json(response.output_text)
         return event
@@ -126,9 +126,9 @@ class EventExtractor:
 _EXTRACTOR: EventExtractor | None = None
 
 
-def _init_worker(model: str, api_key: str | None) -> None:
+def _init_worker(model: str, api_key: str | None, base_url: str | None) -> None:
     global _EXTRACTOR
-    _EXTRACTOR = EventExtractor(model=model, api_key=api_key)
+    _EXTRACTOR = EventExtractor(model=model, api_key=api_key, base_url=base_url)
 
 
 def _process_row(
@@ -194,6 +194,7 @@ def main() -> None:
     parser.add_argument("--text-col", default="text")
     parser.add_argument("--time-col", default="created_at")
     parser.add_argument("--api-key", default=None)
+    parser.add_argument("--base-url", default=None)
     parser.add_argument("--workers", type=int, default=_default_workers())
     parser.add_argument("--chunk-size", type=int, default=10)
     args = parser.parse_args()
@@ -217,7 +218,7 @@ def main() -> None:
         with ctx.Pool(
             processes=args.workers,
             initializer=_init_worker,
-            initargs=(args.model, args.api_key),
+            initargs=(args.model, args.api_key, args.base_url),
         ) as pool:
             records_iter = pool.imap(worker, rows_iter, chunksize=args.chunk_size)
             write_jsonl(bucket_output / "events_raw.jsonl", records_iter)
