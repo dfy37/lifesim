@@ -1,0 +1,231 @@
+#!/usr/bin/env python3
+"""Module B: Extract atomic narrative events from tweet data per bucket."""
+
+from __future__ import annotations
+
+import argparse
+import json
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any, Iterable
+
+import duckdb
+from openai import OpenAI
+from json_repair import loads as repair_json
+
+SYSTEM_PROMPT = """You are an Event Extraction agent.
+Extract a single atomic Event from the given tweet.
+Return ONLY valid JSON for the event with the exact schema:
+{
+  "time": "string or null",
+  "location": "string or null",
+  "environment": "string or null",
+  "action": "string (first-person)",
+  "observation": "string (first-person)",
+  "inner_thought": "string (first-person)"
+}
+
+Hard constraints:
+- Use first-person phrasing for action/observation/inner_thought.
+- If information is missing, set it to null.
+- For inner_thought: do NOT use abstract labels (e.g., anxious, happy).
+  Use explicit inner speech or observable psychological behavior.
+- Do NOT add causal explanations, motivations, or personality judgments.
+- Do NOT infer facts not in the tweet.
+"""
+
+REVISION_PROMPT = """You are refining a previously extracted Event.
+Given the tweet and validator feedback, produce a corrected Event JSON.
+Follow the same schema and constraints. Output ONLY the JSON object.
+"""
+
+
+@dataclass
+class Event:
+    time: str | None
+    location: str | None
+    environment: str | None
+    action: str | None
+    observation: str | None
+    inner_thought: str | None
+
+    @staticmethod
+    def from_mapping(data: dict[str, Any]) -> "Event":
+        return Event(
+            time=_normalize_optional_str(data.get("time")),
+            location=_normalize_optional_str(data.get("location")),
+            environment=_normalize_optional_str(data.get("environment")),
+            action=_normalize_optional_str(data.get("action")),
+            observation=_normalize_optional_str(data.get("observation")),
+            inner_thought=_normalize_optional_str(data.get("inner_thought")),
+        )
+
+
+def _normalize_optional_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        stripped = value.strip()
+        return stripped if stripped else None
+    return str(value).strip() or None
+
+
+def _parse_event_json(text: str) -> Event:
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        payload = repair_json(text)
+    if not isinstance(payload, dict):
+        raise ValueError("Event payload must be a JSON object.")
+    return Event.from_mapping(payload)
+
+
+class EventExtractor:
+    def __init__(self, model: str, api_key: str | None = None):
+        self.client = OpenAI(api_key=api_key)
+        self.model = model
+
+    def extract(self, tweet_text: str, tweet_time: str | None) -> Event:
+        user_prompt = (
+            "Tweet:\n"
+            f"{tweet_text}\n\n"
+            f"Tweet time: {tweet_time or 'unknown'}\n"
+        )
+        response = self.client.responses.create(
+            model=self.model,
+            input=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.2,
+        )
+        event = _parse_event_json(response.output_text)
+        return event
+
+    def revise(self, tweet_text: str, tweet_time: str | None, feedback: str) -> Event:
+        user_prompt = (
+            "Tweet:\n"
+            f"{tweet_text}\n\n"
+            f"Tweet time: {tweet_time or 'unknown'}\n\n"
+            f"Validator feedback: {feedback}\n"
+        )
+        response = self.client.responses.create(
+            model=self.model,
+            input=[
+                {"role": "system", "content": REVISION_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.2,
+        )
+        event = _parse_event_json(response.output_text)
+        return event
+
+
+def iter_bucket_parquets(root: Path) -> Iterable[tuple[str, Path]]:
+    for bucket_dir in sorted(root.glob("bucket_id=*")):
+        if not bucket_dir.is_dir():
+            continue
+        parquet_path = bucket_dir / "data.parquet"
+        if parquet_path.exists():
+            yield bucket_dir.name, parquet_path
+
+
+def load_bucket_dataframe(
+    parquet_path: Path,
+    text_col: str,
+    time_col: str | None,
+    user_col: str | None,
+    id_col: str | None,
+):
+    columns = [text_col]
+    if time_col:
+        columns.append(time_col)
+    if user_col:
+        columns.append(user_col)
+    if id_col:
+        columns.append(id_col)
+    column_sql = ", ".join(f'"{col}"' for col in columns)
+    query = f"SELECT {column_sql} FROM read_parquet(?)"
+    con = duckdb.connect()
+    try:
+        df = con.execute(query, [str(parquet_path)]).fetch_df()
+    finally:
+        con.close()
+    return df
+
+
+def write_jsonl(path: Path, records: Iterable[dict[str, Any]]) -> None:
+    with path.open("w", encoding="utf-8") as handle:
+        for record in records:
+            handle.write(json.dumps(record, ensure_ascii=False))
+            handle.write("\n")
+
+
+def build_records(
+    df,
+    bucket_id: str,
+    extractor: EventExtractor,
+    text_col: str,
+    time_col: str | None,
+    user_col: str | None,
+    id_col: str | None,
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for row in df.itertuples(index=False):
+        row_dict = row._asdict()
+        tweet_text = row_dict[text_col]
+        if tweet_text is None:
+            continue
+        tweet_time = row_dict.get(time_col) if time_col else None
+        event = extractor.extract(str(tweet_text), _normalize_optional_str(tweet_time))
+        record = {
+            "bucket_id": bucket_id,
+            "tweet_id": row_dict.get(id_col) if id_col else None,
+            "user_id": row_dict.get(user_col) if user_col else None,
+            "tweet_time": _normalize_optional_str(tweet_time),
+            "tweet_text": str(tweet_text),
+            "event": asdict(event),
+        }
+        records.append(record)
+    return records
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input-root", required=True, type=Path)
+    parser.add_argument("--output-root", required=True, type=Path)
+    parser.add_argument("--model", default="gpt-4o-mini")
+    parser.add_argument("--text-col", default="text")
+    parser.add_argument("--time-col", default="created_at")
+    parser.add_argument("--user-col", default="user_id")
+    parser.add_argument("--id-col", default="id")
+    parser.add_argument("--api-key", default=None)
+    args = parser.parse_args()
+
+    extractor = EventExtractor(model=args.model, api_key=args.api_key)
+    args.output_root.mkdir(parents=True, exist_ok=True)
+
+    for bucket_id, parquet_path in iter_bucket_parquets(args.input_root):
+        df = load_bucket_dataframe(
+            parquet_path,
+            text_col=args.text_col,
+            time_col=args.time_col,
+            user_col=args.user_col,
+            id_col=args.id_col,
+        )
+        bucket_output = args.output_root / bucket_id
+        bucket_output.mkdir(parents=True, exist_ok=True)
+        records = build_records(
+            df,
+            bucket_id=bucket_id,
+            extractor=extractor,
+            text_col=args.text_col,
+            time_col=args.time_col,
+            user_col=args.user_col,
+            id_col=args.id_col,
+        )
+        write_jsonl(bucket_output / "events_raw.jsonl", records)
+
+
+if __name__ == "__main__":
+    main()
