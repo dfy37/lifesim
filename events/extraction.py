@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import multiprocessing
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
 from functools import partial
 from pathlib import Path
@@ -269,14 +269,21 @@ def main() -> None:
             initializer=_init_worker,
             initargs=(args.model, args.api_key, args.base_url),
         ) as executor:
-            records_iter = executor.map(worker, rows_iter, chunksize=args.chunk_size)
-            records_iter = tqdm(
-                records_iter,
+            futures = [
+                executor.submit(worker, row_dict)
+                for row_dict in rows_iter
+            ]
+            with tqdm(
                 total=total_rows,
                 desc=f"Processing {bucket_id}",
                 unit="row",
-            )
-            write_jsonl(bucket_output / "events_raw.jsonl", records_iter)
+            ) as progress:
+                def _iter_results():
+                    for future in as_completed(futures):
+                        progress.update(1)
+                        yield future.result()
+
+                write_jsonl(bucket_output / "events_raw.jsonl", _iter_results())
         
         break
 
