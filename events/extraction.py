@@ -222,7 +222,8 @@ def main() -> None:
         ) as pool:
             records_iter = pool.imap(worker, rows_iter, chunksize=args.chunk_size)
             write_jsonl(bucket_output / "events_raw.jsonl", records_iter)
-
+        
+        break
 
 if __name__ == "__main__":
     main()
