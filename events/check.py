@@ -6,10 +6,13 @@ from __future__ import annotations
 import argparse
 import json
 import multiprocessing
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import asdict
 from functools import partial
 from pathlib import Path
 from typing import Any, Iterable
+
+from tqdm import tqdm
 
 from openai import OpenAI
 from json_repair import loads as repair_json
@@ -165,6 +168,11 @@ def iter_jsonl(path: Path) -> Iterable[dict[str, Any]]:
             yield json.loads(line)
 
 
+def count_jsonl_records(path: Path) -> int:
+    with path.open("r", encoding="utf-8") as handle:
+        return sum(1 for line in handle if line.strip())
+
+
 def write_jsonl(path: Path, records: Iterable[dict[str, Any]]) -> None:
     with path.open("w", encoding="utf-8") as handle:
         for record in records:
@@ -193,17 +201,32 @@ def main() -> None:
 
     for bucket_id, jsonl_path in iter_bucket_jsonl(args.input_root):
         records = iter_jsonl(jsonl_path)
+        total_records = count_jsonl_records(jsonl_path)
         worker = partial(_process_record, epsilon=args.epsilon, max_rounds=args.max_rounds)
         bucket_output = args.output_root / bucket_id
         bucket_output.mkdir(parents=True, exist_ok=True)
         ctx = multiprocessing.get_context("spawn")
-        with ctx.Pool(
-            processes=args.workers,
+        with ProcessPoolExecutor(
+            max_workers=args.workers,
+            mp_context=ctx,
             initializer=_init_worker,
             initargs=(args.generator_model, args.validator_model, args.api_key),
-        ) as pool:
-            checked_records = pool.imap(worker, records, chunksize=args.chunk_size)
-            write_jsonl(bucket_output / "events_checked.jsonl", checked_records)
+        ) as executor:
+            futures = [
+                executor.submit(worker, record)
+                for record in records
+            ]
+            with tqdm(
+                total=total_records,
+                desc=f"Checking {bucket_id}",
+                unit="row",
+            ) as progress:
+                def _iter_results():
+                    for future in as_completed(futures):
+                        progress.update(1)
+                        yield future.result()
+
+                write_jsonl(bucket_output / "events_checked.jsonl", _iter_results())
 
 
 if __name__ == "__main__":
