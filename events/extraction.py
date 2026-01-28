@@ -10,6 +10,7 @@ from dataclasses import asdict, dataclass
 from functools import partial
 from pathlib import Path
 from typing import Any, Iterable
+from tqdm import tqdm
 
 import duckdb
 from openai import OpenAI
@@ -131,6 +132,26 @@ def _init_worker(model: str, api_key: str | None, base_url: str | None) -> None:
     _EXTRACTOR = EventExtractor(model=model, api_key=api_key, base_url=base_url)
 
 
+# def _process_row(
+#     row_dict: dict[str, Any],
+#     bucket_id: str,
+#     text_col: str,
+#     time_col: str | None,
+# ) -> dict[str, Any] | None:
+#     if _EXTRACTOR is None:
+#         raise RuntimeError("Extractor worker is not initialized.")
+#     tweet_text = row_dict.get(text_col)
+#     if tweet_text is None:
+#         return None
+#     tweet_time = row_dict.get(time_col) if time_col else None
+#     event = _EXTRACTOR.extract(str(tweet_text), _normalize_optional_str(tweet_time))
+#     record = dict(row_dict)
+#     record["bucket_id"] = bucket_id
+#     record["tweet_time"] = _normalize_optional_str(tweet_time)
+#     record["tweet_text"] = str(tweet_text)
+#     record["event"] = asdict(event)
+#     return record
+
 def _process_row(
     row_dict: dict[str, Any],
     bucket_id: str,
@@ -139,17 +160,35 @@ def _process_row(
 ) -> dict[str, Any] | None:
     if _EXTRACTOR is None:
         raise RuntimeError("Extractor worker is not initialized.")
-    tweet_text = row_dict.get(text_col)
-    if tweet_text is None:
-        return None
-    tweet_time = row_dict.get(time_col) if time_col else None
-    event = _EXTRACTOR.extract(str(tweet_text), _normalize_optional_str(tweet_time))
-    record = dict(row_dict)
-    record["bucket_id"] = bucket_id
-    record["tweet_time"] = _normalize_optional_str(tweet_time)
-    record["tweet_text"] = str(tweet_text)
-    record["event"] = asdict(event)
-    return record
+    try:
+        tweet_text = row_dict.get(text_col)
+        if tweet_text is None:
+            return None
+        tweet_time = row_dict.get(time_col) if time_col else None
+        event = _EXTRACTOR.extract(
+            str(tweet_text),
+            _normalize_optional_str(tweet_time),
+        )
+        record = dict(row_dict)
+        record["bucket_id"] = bucket_id
+        record["tweet_time"] = _normalize_optional_str(tweet_time)
+        record["tweet_text"] = str(tweet_text)
+        record["event"] = asdict(event)
+        record["error"] = None
+        return record
+    except Exception as e:
+        return {
+            **row_dict,
+            "bucket_id": bucket_id,
+            "tweet_text": row_dict.get(text_col),
+            "tweet_time": row_dict.get(time_col),
+            "event": None,
+            "error": {
+                "type": type(e).__name__,
+                "message": str(e),
+            },
+        }
+
 
 
 def iter_bucket_parquets(root: Path) -> Iterable[tuple[str, Path]]:
@@ -161,13 +200,17 @@ def iter_bucket_parquets(root: Path) -> Iterable[tuple[str, Path]]:
             yield bucket_dir.name, parquet_path
 
 
-def load_bucket_dataframe(
-    parquet_path: Path,
-):
+def load_bucket_dataframe(parquet_path: Path, limit: int | None = None):
     query = "SELECT * FROM read_parquet(?)"
+    if limit is not None:
+        query += " LIMIT ?"
+
     con = duckdb.connect()
     try:
-        df = con.execute(query, [str(parquet_path)]).fetch_df()
+        if limit is not None:
+            df = con.execute(query, [str(parquet_path), limit]).fetch_df()
+        else:
+            df = con.execute(query, [str(parquet_path)]).fetch_df()
     finally:
         con.close()
     return df
@@ -202,9 +245,13 @@ def main() -> None:
     args.output_root.mkdir(parents=True, exist_ok=True)
 
     for bucket_id, parquet_path in iter_bucket_parquets(args.input_root):
+        print(f"Processing bucket {bucket_id} ...")
         df = load_bucket_dataframe(
             parquet_path,
+            limit=100
         )
+        total_rows = len(df)
+        
         bucket_output = args.output_root / bucket_id
         bucket_output.mkdir(parents=True, exist_ok=True)
         rows_iter = (row._asdict() for row in df.itertuples(index=False))
@@ -221,6 +268,12 @@ def main() -> None:
             initargs=(args.model, args.api_key, args.base_url),
         ) as pool:
             records_iter = pool.imap(worker, rows_iter, chunksize=args.chunk_size)
+            records_iter = tqdm(
+                records_iter,
+                total=total_rows,
+                desc=f"Processing {bucket_id}",
+                unit="row",
+            )
             write_jsonl(bucket_output / "events_raw.jsonl", records_iter)
         
         break
