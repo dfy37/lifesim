@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import multiprocessing
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict, dataclass
 from functools import partial
 from pathlib import Path
@@ -262,12 +263,13 @@ def main() -> None:
             time_col=args.time_col,
         )
         ctx = multiprocessing.get_context("spawn")
-        with ctx.Pool(
-            processes=args.workers,
+        with ProcessPoolExecutor(
+            max_workers=args.workers,
+            mp_context=ctx,
             initializer=_init_worker,
             initargs=(args.model, args.api_key, args.base_url),
-        ) as pool:
-            records_iter = pool.imap(worker, rows_iter, chunksize=args.chunk_size)
+        ) as executor:
+            records_iter = executor.map(worker, rows_iter, chunksize=args.chunk_size)
             records_iter = tqdm(
                 records_iter,
                 total=total_rows,
