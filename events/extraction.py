@@ -132,7 +132,6 @@ def _init_worker(model: str, api_key: str | None, base_url: str | None) -> None:
     global _EXTRACTOR
     _EXTRACTOR = EventExtractor(model=model, api_key=api_key, base_url=base_url)
 
-
 # def _process_row(
 #     row_dict: dict[str, Any],
 #     bucket_id: str,
@@ -240,7 +239,6 @@ def main() -> None:
     parser.add_argument("--api-key", default=None)
     parser.add_argument("--base-url", default=None)
     parser.add_argument("--workers", type=int, default=_default_workers())
-    parser.add_argument("--chunk-size", type=int, default=10)
     args = parser.parse_args()
 
     args.output_root.mkdir(parents=True, exist_ok=True)
@@ -284,8 +282,6 @@ def main() -> None:
                         yield future.result()
 
                 write_jsonl(bucket_output / "events_raw.jsonl", _iter_results())
-        
-        break
 
 if __name__ == "__main__":
     main()

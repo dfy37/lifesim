@@ -17,7 +17,7 @@ from tqdm import tqdm
 from openai import OpenAI
 from json_repair import loads as repair_json
 
-from lifesim.events.extraction import Event, EventExtractor, _normalize_optional_str
+from extraction import Event, EventExtractor, _normalize_optional_str
 
 VALIDATOR_PROMPT = """You are a Validator Agent.
 Given a source tweet and a generated Event JSON, extract atomic facts from both.
@@ -67,8 +67,8 @@ def compute_delta(facts_source: list[str], facts_generated: list[str]) -> float:
 
 
 class EventValidator:
-    def __init__(self, model: str, api_key: str | None = None):
-        self.client = OpenAI(api_key=api_key)
+    def __init__(self, model: str, api_key: str | None = None, base_url: str | None = None):
+        self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.model = model
 
     def validate(self, tweet_text: str, event: Event) -> tuple[list[str], list[str], str]:
@@ -95,11 +95,10 @@ _EXTRACTOR: EventExtractor | None = None
 _VALIDATOR: EventValidator | None = None
 
 
-def _init_worker(generator_model: str, validator_model: str, api_key: str | None) -> None:
+def _init_worker(generator_model: str, validator_model: str, api_key: str | None, base_url: str | None) -> None:
     global _EXTRACTOR, _VALIDATOR
-    _EXTRACTOR = EventExtractor(model=generator_model, api_key=api_key)
-    _VALIDATOR = EventValidator(model=validator_model, api_key=api_key)
-
+    _EXTRACTOR = EventExtractor(model=generator_model, api_key=api_key, base_url=base_url)
+    _VALIDATOR = EventValidator(model=validator_model, api_key=api_key, base_url=base_url)
 
 def _process_record(
     record: dict[str, Any],
@@ -193,8 +192,8 @@ def main() -> None:
     parser.add_argument("--epsilon", type=float, default=0.35)
     parser.add_argument("--max-rounds", type=int, default=3)
     parser.add_argument("--api-key", default=None)
+    parser.add_argument("--base-url", default=None)
     parser.add_argument("--workers", type=int, default=_default_workers())
-    parser.add_argument("--chunk-size", type=int, default=10)
     args = parser.parse_args()
 
     args.output_root.mkdir(parents=True, exist_ok=True)
@@ -210,7 +209,7 @@ def main() -> None:
             max_workers=args.workers,
             mp_context=ctx,
             initializer=_init_worker,
-            initargs=(args.generator_model, args.validator_model, args.api_key),
+            initargs=(args.generator_model, args.validator_model, args.api_key, args.base_url),
         ) as executor:
             futures = [
                 executor.submit(worker, record)
