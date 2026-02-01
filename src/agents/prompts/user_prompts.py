@@ -137,3 +137,35 @@ Please decide according to the following criteria:
 Where action is your selected action and must be one of the options provided.
 - You may first explain your reasoning, then give the final chosen action.
 """
+
+USER_BELIEF_PROMPT = """请基于最新事件，提取用户状态的关键变化，并更新用户的知识图谱信念（belief）。
+### 用户画像
+{profile}
+### 最新事件
+{event}
+### 事件场景
+{dialogue_scene}
+### 当前 belief 知识图谱
+{belief_graph}
+
+### 要求
+- 仅提取与“用户状态变化”有关的事实（例如情绪、健康、目标、偏好、资源、关系等），不要复述事件细节。
+- 以知识图谱形式输出：节点（nodes）+ 边（edges）。
+- 节点需包含: id, label, type（如 Person/State/Goal/Preference/Resource/Relationship）。
+- 边需包含: source, relation, target, evidence（从事件中来的简短依据）, confidence（0-1）。
+- 若没有显著变化，输出空数组。
+- 输出 JSON，包裹在 ```json ``` 中。
+
+示例输出:
+```json
+{{
+  "nodes": [
+    {{"id": "user", "label": "User", "type": "Person"}},
+    {{"id": "state_stressed", "label": "stressed", "type": "State"}}
+  ],
+  "edges": [
+    {{"source": "user", "relation": "feels", "target": "state_stressed", "evidence": "事件导致压力增加", "confidence": 0.7}}
+  ]
+}}
+```
+"""

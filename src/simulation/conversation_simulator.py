@@ -148,6 +148,7 @@ class ConversationSimulator:
                 })
 
         self.user_agent._build_environment(event)
+        self.user_agent.update_belief_from_event(event)
         self.user_agent._build_chat_system_prompt()
         self.assistant_agent._build_system_prompt(event)
 
