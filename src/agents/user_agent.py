@@ -12,7 +12,8 @@ from agents.prompts import (
     USER_REVISE_CONV_PROMPT,
     USER_MEMORY_PROMPT,
     USER_EMOTION_PROMPT,
-    USER_ACTION_PROMPT
+    USER_ACTION_PROMPT,
+    USER_BELIEF_PROMPT
 )
 from agents.memory import KVMemory, SimpleMemory
 from utils.utils import parse_json_dict_response, find_closest_str_match, get_logger
@@ -56,6 +57,10 @@ class UserAgent:
         self.messages = []
         self.action_space = UserActionEnum
         self.states = []
+        self.belief_graph = {
+            "nodes": [],
+            "edges": []
+        }
 
         # Memory perception coefficient
         self.alpha = alpha
@@ -72,6 +77,67 @@ class UserAgent:
         :param event: scenario event
         """
         self.event = event
+
+    def _merge_belief_graph(self, new_graph: dict) -> None:
+        nodes = new_graph.get("nodes") if isinstance(new_graph, dict) else None
+        edges = new_graph.get("edges") if isinstance(new_graph, dict) else None
+        if not isinstance(nodes, list) or not isinstance(edges, list):
+            return
+
+        existing_nodes = {
+            (node.get("id") or node.get("label")): node
+            for node in self.belief_graph.get("nodes", [])
+            if isinstance(node, dict) and (node.get("id") or node.get("label"))
+        }
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            key = node.get("id") or node.get("label")
+            if not key or key in existing_nodes:
+                continue
+            existing_nodes[key] = node
+
+        existing_edges = {
+            (edge.get("source"), edge.get("relation"), edge.get("target"))
+            for edge in self.belief_graph.get("edges", [])
+            if isinstance(edge, dict)
+        }
+        for edge in edges:
+            if not isinstance(edge, dict):
+                continue
+            key = (edge.get("source"), edge.get("relation"), edge.get("target"))
+            if None in key or key in existing_edges:
+                continue
+            existing_edges.add(key)
+            self.belief_graph.setdefault("edges", []).append(edge)
+
+        self.belief_graph["nodes"] = list(existing_nodes.values())
+
+    def update_belief_from_event(self, event: dict) -> dict:
+        self.logger.info("[UserAgent] Start updating belief graph from event...")
+        belief_prompt = USER_BELIEF_PROMPT.format(
+            profile=self.static_memory.get(),
+            event=event.get("life_event") or event.get("event", ""),
+            dialogue_scene=event.get("dialogue_scene", ""),
+            belief_graph=json.dumps(self.belief_graph, ensure_ascii=False)
+        )
+        with self.synchronized():
+            belief_response = self.model.chat([{'role': 'user', 'content': belief_prompt}])
+        belief_data = parse_json_dict_response(belief_response, ['nodes', 'edges'])
+        if not isinstance(belief_data, dict):
+            belief_data = {"nodes": [], "edges": []}
+        if not isinstance(belief_data.get("nodes"), list):
+            belief_data["nodes"] = []
+        if not isinstance(belief_data.get("edges"), list):
+            belief_data["edges"] = []
+
+        self._merge_belief_graph(belief_data)
+        self.logger.info(
+            "[UserAgent] Belief graph updated: "
+            f"nodes={len(self.belief_graph.get('nodes', []))}, "
+            f"edges={len(self.belief_graph.get('edges', []))}"
+        )
+        return belief_data
 
     def _build_chat_system_prompt(self) -> str:
         profile = self.static_memory.get()

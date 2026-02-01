@@ -4,7 +4,8 @@ from agents.prompts.user_prompts import (
     USER_REVISE_CONV_PROMPT,
     USER_CONV_SYSTEM_PROMPT,
     USER_EMOTION_PROMPT,
-    USER_MEMORY_PROMPT
+    USER_MEMORY_PROMPT,
+    USER_BELIEF_PROMPT
 )
 from agents.prompts.assistant_prompts import (
     ASSISTANT_CONV_PROMPT,
