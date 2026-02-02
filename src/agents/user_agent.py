@@ -4,6 +4,7 @@ import json
 import numpy as np
 import threading
 import contextlib
+import re
 from typing import List, Optional
 
 from agents.prompts import (
@@ -17,6 +18,7 @@ from agents.prompts import (
 )
 from agents.memory import KVMemory, SimpleMemory
 from utils.utils import parse_json_dict_response, find_closest_str_match, get_logger
+from json_repair import loads as repair_json
 
 class UserActionEnum(str, Enum):
     END_CONVERSATION = "End Conversation"
@@ -57,10 +59,7 @@ class UserAgent:
         self.messages = []
         self.action_space = UserActionEnum
         self.states = []
-        self.belief_graph = {
-            "nodes": [],
-            "edges": []
-        }
+        self.beliefs = []
 
         # Memory perception coefficient
         self.alpha = alpha
@@ -78,64 +77,81 @@ class UserAgent:
         """
         self.event = event
 
-    def _merge_belief_graph(self, new_graph: dict) -> None:
-        nodes = new_graph.get("nodes") if isinstance(new_graph, dict) else None
-        edges = new_graph.get("edges") if isinstance(new_graph, dict) else None
-        if not isinstance(nodes, list) or not isinstance(edges, list):
+    def _merge_beliefs(self, new_beliefs: list) -> None:
+        if not isinstance(new_beliefs, list):
             return
+        existing = {self._belief_key(belief) for belief in self.beliefs}
+        for belief in new_beliefs:
+            normalized = self._normalize_belief(belief)
+            if normalized is None:
+                continue
+            key = self._belief_key(normalized)
+            if key in existing:
+                continue
+            existing.add(key)
+            self.beliefs.append(normalized)
 
-        existing_nodes = {
-            (node.get("id") or node.get("label")): node
-            for node in self.belief_graph.get("nodes", [])
-            if isinstance(node, dict) and (node.get("id") or node.get("label"))
-        }
-        for node in nodes:
-            if not isinstance(node, dict):
-                continue
-            key = node.get("id") or node.get("label")
-            if not key or key in existing_nodes:
-                continue
-            existing_nodes[key] = node
+    @staticmethod
+    def _belief_key(belief: list) -> tuple:
+        triple, description, time, utterance = belief
+        return (tuple(triple), description, time, utterance)
 
-        existing_edges = {
-            (edge.get("source"), edge.get("relation"), edge.get("target"))
-            for edge in self.belief_graph.get("edges", [])
-            if isinstance(edge, dict)
-        }
-        for edge in edges:
-            if not isinstance(edge, dict):
-                continue
-            key = (edge.get("source"), edge.get("relation"), edge.get("target"))
-            if None in key or key in existing_edges:
-                continue
-            existing_edges.add(key)
-            self.belief_graph.setdefault("edges", []).append(edge)
+    @staticmethod
+    def _normalize_belief(belief: list | tuple) -> list | None:
+        if not isinstance(belief, (list, tuple)) or len(belief) != 4:
+            return None
+        triple, description, time, utterance = belief
+        if not isinstance(triple, (list, tuple)) or len(triple) != 3:
+            return None
+        source, relation, target = triple
+        triple_norm = [
+            str(source).strip(),
+            str(relation).strip(),
+            str(target).strip()
+        ]
+        if any(not value for value in triple_norm):
+            return None
+        description_norm = str(description).strip() if description is not None else ""
+        time_norm = str(time).strip() if time is not None else None
+        utterance_norm = None
+        if utterance is not None and str(utterance).strip():
+            try:
+                utterance_norm = int(utterance)
+            except (TypeError, ValueError):
+                utterance_norm = None
+        return [triple_norm, description_norm, time_norm, utterance_norm]
 
-        self.belief_graph["nodes"] = list(existing_nodes.values())
+    @staticmethod
+    def _parse_beliefs_response(text: str) -> list:
+        if not isinstance(text, str) or not text.strip():
+            return []
+        match = re.search(r"```json\s*([\s\S]*?)\s*```", text)
+        json_str = match.group(1).strip() if match else text.strip()
+        try:
+            data = repair_json(json_str)
+        except Exception:
+            return []
+        return data if isinstance(data, list) else []
 
     def update_belief_from_event(self, event: dict) -> dict:
-        self.logger.info("[UserAgent] Start updating belief graph from event...")
+        self.logger.info("[UserAgent] Start updating beliefs from event...")
+        event_time = event.get("time") or event.get("timestamp")
+        utterance_index = event.get("utterance") or event.get("utterance_index")
         belief_prompt = USER_BELIEF_PROMPT.format(
             profile=self.static_memory.get(),
             event=event.get("life_event") or event.get("event", ""),
             dialogue_scene=event.get("dialogue_scene", ""),
-            belief_graph=json.dumps(self.belief_graph, ensure_ascii=False)
+            belief_list=json.dumps(self.beliefs, ensure_ascii=False),
+            event_time=event_time,
+            utterance_index=utterance_index
         )
         with self.synchronized():
             belief_response = self.model.chat([{'role': 'user', 'content': belief_prompt}])
-        belief_data = parse_json_dict_response(belief_response, ['nodes', 'edges'])
-        if not isinstance(belief_data, dict):
-            belief_data = {"nodes": [], "edges": []}
-        if not isinstance(belief_data.get("nodes"), list):
-            belief_data["nodes"] = []
-        if not isinstance(belief_data.get("edges"), list):
-            belief_data["edges"] = []
-
-        self._merge_belief_graph(belief_data)
+        belief_data = self._parse_beliefs_response(belief_response)
+        self._merge_beliefs(belief_data)
         self.logger.info(
-            "[UserAgent] Belief graph updated: "
-            f"nodes={len(self.belief_graph.get('nodes', []))}, "
-            f"edges={len(self.belief_graph.get('edges', []))}"
+            "[UserAgent] Beliefs updated: "
+            f"count={len(self.beliefs)}"
         )
         return belief_data
 

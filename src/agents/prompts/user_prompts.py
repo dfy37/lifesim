@@ -138,34 +138,35 @@ Where action is your selected action and must be one of the options provided.
 - You may first explain your reasoning, then give the final chosen action.
 """
 
-USER_BELIEF_PROMPT = """请基于最新事件，提取用户状态的关键变化，并更新用户的知识图谱信念（belief）。
+USER_BELIEF_PROMPT = """请基于最新事件，提取用户状态的关键变化，并更新用户的 belief 列表。
 ### 用户画像
 {profile}
 ### 最新事件
 {event}
 ### 事件场景
 {dialogue_scene}
-### 当前 belief 知识图谱
-{belief_graph}
+### 事件时间（用于 time 字段）
+{event_time}
+### 对话轮次（用于 utterance 字段；若未知可置空）
+{utterance_index}
+### 当前 belief 列表
+{belief_list}
 
 ### 要求
 - 仅提取与“用户状态变化”有关的事实（例如情绪、健康、目标、偏好、资源、关系等），不要复述事件细节。
-- 以知识图谱形式输出：节点（nodes）+ 边（edges）。
-- 节点需包含: id, label, type（如 Person/State/Goal/Preference/Resource/Relationship）。
-- 边需包含: source, relation, target, evidence（从事件中来的简短依据）, confidence（0-1）。
-- 若没有显著变化，输出空数组。
-- 输出 JSON，包裹在 ```json ``` 中。
+- 输出为列表，每条 belief 格式为：
+  [triple(source, relation, target), language_description, time, utterance]
+  - triple 为三元组，使用数组表示: [source, relation, target]
+  - language_description 为自然语言简述
+  - time 对应事件时间（可直接使用上面的事件时间）
+  - utterance 对应该事件下用户-助手对话中的第几轮对话（未知可置空）
+- 若没有显著变化，输出空列表。
+- 输出 JSON 数组，包裹在 ```json ``` 中。
 
 示例输出:
 ```json
-{{
-  "nodes": [
-    {{"id": "user", "label": "User", "type": "Person"}},
-    {{"id": "state_stressed", "label": "stressed", "type": "State"}}
-  ],
-  "edges": [
-    {{"source": "user", "relation": "feels", "target": "state_stressed", "evidence": "事件导致压力增加", "confidence": 0.7}}
-  ]
-}}
+[
+  [["user", "feels", "stressed"], "用户感到压力增加", "2012-04-15", 2]
+]
 ```
 """
