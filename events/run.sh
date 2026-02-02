@@ -1,12 +1,14 @@
 python -m extraction \
   --input-root /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/data/twitter_archive_cleaned/twitter_archive_cleaned/shards \
-  --output-root /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/data/events_labeled_data \
+  --output-root /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/data/events_labeled_data_1 \
   --model /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/MODELS/Qwen3-32B \
   --base-url http://0.0.0.0:8000/v1 \
   --api-key "123" \
   --text-col tweet_text \
   --time-col created_at \
-  --workers 16
+  --workers 16 \
+  --max-buckets 2 \
+  --max-users 10 
 
 # python -m check \
 #   --input-root /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/data/events_labeled_data \

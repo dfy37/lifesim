@@ -18,24 +18,50 @@ from openai import OpenAI
 from json_repair import loads as repair_json
 
 SYSTEM_PROMPT = """You are an Event Extraction agent.
-Extract a single atomic Event from the given tweet.
-Return ONLY valid JSON for the event with the exact schema:
+Your task is to extract at most ONE atomic event from a given tweet.
+If the tweet does NOT clearly describe a concrete event experienced by the user,
+return ONLY the following JSON:
+```json
+"null"
+```
+Otherwise, return ONLY valid JSON with the exact schema:
+```json
 {
   "time": "string or null",
   "location": "string or null",
   "environment": "string or null",
-  "action": "string (first-person)",
-  "observation": "string (first-person)",
-  "inner_thought": "string (first-person)"
+  "action": "string or null (first-person)",
+  "observation": "string or null (first-person)",
+  "inner_thought": "string or null (first-person)"
 }
-
-Hard constraints:
-- Use first-person phrasing for action/observation/inner_thought.
-- If information is missing, set it to null.
-- For inner_thought: do NOT use abstract labels (e.g., anxious, happy).
-  Use explicit inner speech or observable psychological behavior.
-- Do NOT add causal explanations, motivations, or personality judgments.
-- Do NOT infer facts not in the tweet.
+```
+### Strict rules:
+1. Source fidelity
+   - ALL generated content MUST be explicitly grounded in the original tweet.
+   - Do NOT infer, guess, generalize, or add information that is not directly stated.
+2. Event existence
+   - An event exists ONLY IF the tweet clearly describes an event the user experienced.
+   - Pure opinions, emotions, statements, jokes, or meta commentary MUST return "null".
+3. Null-event conditions (mandatory)
+   - If the tweet is related to religion, religious beliefs, worship, or religious commentary, return "null".
+   - If the tweet is clearly promotional, advertising, or brand-related (e.g., brand celebration, marketing slogans, corporate announcements), return "null".
+4. Field separation
+   - action: what I explicitly did.
+   - observation: what I explicitly perceived or noticed.
+   - inner_thought: my explicit internal speech or thought as written in the tweet.
+   - action, observation, and inner_thought MAY individually be null.
+   - Do NOT merge these fields or blur their boundaries.
+5. Inner thought constraint
+   - inner_thought must be written as explicit first-person inner speech.
+   - Do NOT use abstract psychological labels
+     (e.g., “I felt happy”, “I was anxious”, “I was excited”).
+   - Use only concrete inner wording that appears in the tweet.
+6. No explanation
+   - Do NOT explain why the event happened.
+   - Do NOT add motivations, causes, or personality judgments.
+### Output format:
+- Return ONLY valid JSON.
+- Do NOT include any extra text, commentary, or formatting.
 """
 
 REVISION_PROMPT = """You are refining a previously extracted Event.
@@ -101,7 +127,7 @@ class EventExtractor:
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=1.0,
+            temperature=0.2,
         )
         event = _parse_event_json(response.output_text)
         return event
@@ -131,26 +157,6 @@ _EXTRACTOR: EventExtractor | None = None
 def _init_worker(model: str, api_key: str | None, base_url: str | None) -> None:
     global _EXTRACTOR
     _EXTRACTOR = EventExtractor(model=model, api_key=api_key, base_url=base_url)
-
-# def _process_row(
-#     row_dict: dict[str, Any],
-#     bucket_id: str,
-#     text_col: str,
-#     time_col: str | None,
-# ) -> dict[str, Any] | None:
-#     if _EXTRACTOR is None:
-#         raise RuntimeError("Extractor worker is not initialized.")
-#     tweet_text = row_dict.get(text_col)
-#     if tweet_text is None:
-#         return None
-#     tweet_time = row_dict.get(time_col) if time_col else None
-#     event = _EXTRACTOR.extract(str(tweet_text), _normalize_optional_str(tweet_time))
-#     record = dict(row_dict)
-#     record["bucket_id"] = bucket_id
-#     record["tweet_time"] = _normalize_optional_str(tweet_time)
-#     record["tweet_text"] = str(tweet_text)
-#     record["event"] = asdict(event)
-#     return record
 
 def _process_row(
     row_dict: dict[str, Any],
@@ -188,8 +194,6 @@ def _process_row(
                 "message": str(e),
             },
         }
-
-
 
 def iter_bucket_parquets(root: Path) -> Iterable[tuple[str, Path]]:
     for bucket_dir in sorted(root.glob("bucket_id=*")):
@@ -285,7 +289,7 @@ def main() -> None:
         print(f"Processing bucket {bucket_id} ...")
         df = load_bucket_dataframe(
             parquet_path,
-            limit=100
+            # limit=100
         )
         df = _select_users(df, args.user_col, args.max_users)
         total_rows = len(df)

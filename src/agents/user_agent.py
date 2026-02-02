@@ -29,13 +29,6 @@ EMOTION_LIST = [
     "joy", "love", "nervousness", "optimism", "pride", "realization",
     "relief", "remorse", "sadness", "surprise", "neutral"
 ]
-# EMOTION_LIST = [
-#     "愉悦", "钦佩", "愤怒", "恼怒", "认可",
-#     "困惑", "好奇", "渴望", "失望", "不赞成",
-#     "厌恶", "尴尬", "兴奋", "恐惧", "感激", "悲痛",
-#     "喜悦", "紧张", "乐观", "自豪",
-#     "懊悔", "悲伤", "惊讶", "中性"
-# ]
 
 class UserAgent:
     _lock = threading.Lock()
