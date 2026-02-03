@@ -422,6 +422,9 @@ class UserAgent:
 
     def get_profile(self) -> dict:
         return self.static_memory.get()
+
+    def get_beliefs(self) -> list:
+        return list(self.beliefs)
     
     def save(self, path):
         with open(path, "w", encoding="utf-8") as f:
