@@ -7,8 +7,8 @@ python -m extraction \
   --text-col tweet_text \
   --time-col created_at \
   --workers 16 \
-  --max-buckets 2 \
-  --max-users 10 
+  --max-buckets 10 \
+  --max-users 10
 
 # python -m check \
 #   --input-root /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/data/events_labeled_data \

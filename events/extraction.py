@@ -36,32 +36,94 @@ Otherwise, return ONLY valid JSON with the exact schema:
 }
 ```
 ### Strict rules:
-1. Source fidelity
+1. Source fidelity (hard constraint)
    - ALL generated content MUST be explicitly grounded in the original tweet.
-   - Do NOT infer, guess, generalize, or add information that is not directly stated.
+   - Do NOT infer, guess, generalize, paraphrase with added meaning, or introduce unstated facts.
+   - If the tweet does not explicitly support a field, set the field to null.
 2. Event existence
-   - An event exists ONLY IF the tweet clearly describes an event the user experienced.
-   - Pure opinions, emotions, statements, jokes, or meta commentary MUST return "null".
-3. Null-event conditions (mandatory)
+   - An event exists ONLY IF the tweet clearly describes something the user personally experienced.
+   - Pure opinions, emotions, evaluations, jokes, commentary, reflections, or statements without a concrete experience MUST return "null".
+3. Mandatory null-event conditions
+   - If the tweet involves Chinese political content
+     (including but not limited to: Chinese national symbols, leaders, political slogans, state ideology, governance),
+     return "null".
    - If the tweet is related to religion, religious beliefs, worship, or religious commentary, return "null".
-   - If the tweet is clearly promotional, advertising, or brand-related (e.g., brand celebration, marketing slogans, corporate announcements), return "null".
-4. Field separation
+   - If the tweet is promotional, advertising, brand-related, or corporate messaging, return "null".
+   - If the tweet is likely written on behalf of an organization or institution, a brand or commercial entity, a campaign, movement, or promotional account, a confession / shoutout / proxy-writing format (e.g., hashtags like #LoveLetters, #Confessions, #DearSomeone), or any account speaking about others rather than from first-person lived experience, return "null".
+4. Profanity handling
+   - If the tweet contains profanity or vulgar expressions,
+     you MAY replace them with semantically equivalent but more polite wording.
+   - Do NOT intensify, exaggerate, or soften the meaning beyond what is stated.
+5. Field semantics and separation (critical)
    - action: what I explicitly did.
-   - observation: what I explicitly perceived or noticed.
-   - inner_thought: my explicit internal speech or thought as written in the tweet.
-   - action, observation, and inner_thought MAY individually be null.
-   - Do NOT merge these fields or blur their boundaries.
-5. Inner thought constraint
-   - inner_thought must be written as explicit first-person inner speech.
+   - observation: what I explicitly perceived, noticed, or witnessed.
+   - inner_thought: my explicit inner speech or thought as written in the tweet.
+   - These three fields MUST NOT overlap in content.
+   - Do NOT restate the same information across multiple fields.
+   - Each field may independently be null.
+   - Use first-person perspective in each field.
+6. Location vs. environment
+   - location: the real-world place where I was (no adjectives, no atmosphere).
+     Examples: "home", "hospital", "street", "office".
+   - environment: the surrounding real-world context of the event,
+     such as weather, physical conditions, scene descriptions, or situational context.
+   - Descriptive modifiers belong ONLY in environment, not in location.
+7. Inner thought constraints
+   - inner_thought MUST be explicit first-person inner speech present in the tweet.
    - Do NOT use abstract psychological labels
-     (e.g., “I felt happy”, “I was anxious”, “I was excited”).
-   - Use only concrete inner wording that appears in the tweet.
-6. No explanation
+     (e.g., "I felt happy", "I was anxious", "I was excited").
+   - Only use concrete wording that directly appears in the tweet.
+8. No explanation or interpretation
    - Do NOT explain why the event happened.
-   - Do NOT add motivations, causes, or personality judgments.
+   - Do NOT add motivations, causes, implications, or personality judgments.
 ### Output format:
 - Return ONLY valid JSON.
-- Do NOT include any extra text, commentary, or formatting.
+- Do NOT include any extra text, explanation, or formatting.
+### Examples
+Tweet: Cleaning the whole house so that my mom doestn get mad
+Output: 
+```json
+{
+    "time": "2023-08-31 23:56:35", 
+    "location": "house", 
+    "environment": null, 
+    "action": "I am cleaning the whole house", 
+    "observation": null, 
+    "inner_thought": "so that my mom doesn't get mad"
+}
+```
+
+Tweet: Transfer Deadline day for those of us in the UK.. Already got my spreadsheet ready for all the #nffc related stuff I'll need to do.
+Output: 
+```json
+{
+    "time": "2023-09-01 08:03:18", 
+    "location": null, 
+    "environment": null, 
+    "action": "I got my spreadsheet ready for all the #nffc related stuff I'll need to do", 
+    "observation": null, 
+    "inner_thought": null
+}
+```
+
+Tweet: I left my watermelon in the freezer for just slightly too long but just the surface being frozen results in a rather nice texture
+Output: 
+```json
+{
+    "time": null, 
+    "location": null, 
+    "environment": null,
+    "action": "I left my watermelon in the freezer", 
+    "observation": "I notice that the surface being frozen results in a rather nice texture",           
+    "inner_thought": null
+}
+```
+
+Tweet: #QUTLoveLetters16943  Dear those two who doing the poetry assignment who were brainstorming at the bus stop at KG. Is it too late to join your course? You’re both gorgeous. And the poems you were spitting made me SWOON Yours pashunately, T.P
+Output: 
+```json
+"null"
+```
 """
 
 REVISION_PROMPT = """You are refining a previously extracted Event.

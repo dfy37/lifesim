@@ -82,11 +82,9 @@ def refine_intention(model, intention: str) -> str:
     refined = data.get("intention")
     return refined.strip() if isinstance(refined, str) else intention.strip()
 
-
 class ConvHistoryGenerator:
     def __init__(
         self,
-        user_profile_generator,
         life_event_engine,
         user_agent,
         fast_conv_simulator,
@@ -95,7 +93,6 @@ class ConvHistoryGenerator:
         max_retrievals: int = 5,
         logger_silent: bool = False,
     ) -> None:
-        self.user_profile_generator = user_profile_generator
         self.life_event_engine = life_event_engine
         self.user_agent = user_agent
         self.fast_conv_simulator = fast_conv_simulator
