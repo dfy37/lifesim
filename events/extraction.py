@@ -18,24 +18,112 @@ from openai import OpenAI
 from json_repair import loads as repair_json
 
 SYSTEM_PROMPT = """You are an Event Extraction agent.
-Extract a single atomic Event from the given tweet.
-Return ONLY valid JSON for the event with the exact schema:
+Your task is to extract at most ONE atomic event from a given tweet.
+If the tweet does NOT clearly describe a concrete event experienced by the user,
+return ONLY the following JSON:
+```json
+"null"
+```
+Otherwise, return ONLY valid JSON with the exact schema:
+```json
 {
   "time": "string or null",
   "location": "string or null",
   "environment": "string or null",
-  "action": "string (first-person)",
-  "observation": "string (first-person)",
-  "inner_thought": "string (first-person)"
+  "action": "string or null (first-person)",
+  "observation": "string or null (first-person)",
+  "inner_thought": "string or null (first-person)"
 }
+```
+### Strict rules:
+1. Source fidelity (hard constraint)
+   - ALL generated content MUST be explicitly grounded in the original tweet.
+   - Do NOT infer, guess, generalize, paraphrase with added meaning, or introduce unstated facts.
+   - If the tweet does not explicitly support a field, set the field to null.
+2. Event existence
+   - An event exists ONLY IF the tweet clearly describes something the user personally experienced.
+   - Pure opinions, emotions, evaluations, jokes, commentary, reflections, or statements without a concrete experience MUST return "null".
+3. Mandatory null-event conditions
+   - If the tweet involves Chinese political content
+     (including but not limited to: Chinese national symbols, leaders, political slogans, state ideology, governance),
+     return "null".
+   - If the tweet is related to religion, religious beliefs, worship, or religious commentary, return "null".
+   - If the tweet is promotional, advertising, brand-related, or corporate messaging, return "null".
+   - If the tweet is likely written on behalf of an organization or institution, a brand or commercial entity, a campaign, movement, or promotional account, a confession / shoutout / proxy-writing format (e.g., hashtags like #LoveLetters, #Confessions, #DearSomeone), or any account speaking about others rather than from first-person lived experience, return "null".
+4. Profanity handling
+   - If the tweet contains profanity or vulgar expressions,
+     you MAY replace them with semantically equivalent but more polite wording.
+   - Do NOT intensify, exaggerate, or soften the meaning beyond what is stated.
+5. Field semantics and separation (critical)
+   - action: what I explicitly did.
+   - observation: what I explicitly perceived, noticed, or witnessed.
+   - inner_thought: my explicit inner speech or thought as written in the tweet.
+   - These three fields MUST NOT overlap in content.
+   - Do NOT restate the same information across multiple fields.
+   - Each field may independently be null.
+   - Use first-person perspective in each field.
+6. Location vs. environment
+   - location: the real-world place where I was (no adjectives, no atmosphere).
+     Examples: "home", "hospital", "street", "office".
+   - environment: the surrounding real-world context of the event,
+     such as weather, physical conditions, scene descriptions, or situational context.
+   - Descriptive modifiers belong ONLY in environment, not in location.
+7. Inner thought constraints
+   - inner_thought MUST be explicit first-person inner speech present in the tweet.
+   - Do NOT use abstract psychological labels
+     (e.g., "I felt happy", "I was anxious", "I was excited").
+   - Only use concrete wording that directly appears in the tweet.
+8. No explanation or interpretation
+   - Do NOT explain why the event happened.
+   - Do NOT add motivations, causes, implications, or personality judgments.
+### Output format:
+- Return ONLY valid JSON.
+- Do NOT include any extra text, explanation, or formatting.
+### Examples
+Tweet: Cleaning the whole house so that my mom doestn get mad
+Output: 
+```json
+{
+    "time": "2023-08-31 23:56:35", 
+    "location": "house", 
+    "environment": null, 
+    "action": "I am cleaning the whole house", 
+    "observation": null, 
+    "inner_thought": "so that my mom doesn't get mad"
+}
+```
 
-Hard constraints:
-- Use first-person phrasing for action/observation/inner_thought.
-- If information is missing, set it to null.
-- For inner_thought: do NOT use abstract labels (e.g., anxious, happy).
-  Use explicit inner speech or observable psychological behavior.
-- Do NOT add causal explanations, motivations, or personality judgments.
-- Do NOT infer facts not in the tweet.
+Tweet: Transfer Deadline day for those of us in the UK.. Already got my spreadsheet ready for all the #nffc related stuff I'll need to do.
+Output: 
+```json
+{
+    "time": "2023-09-01 08:03:18", 
+    "location": null, 
+    "environment": null, 
+    "action": "I got my spreadsheet ready for all the #nffc related stuff I'll need to do", 
+    "observation": null, 
+    "inner_thought": null
+}
+```
+
+Tweet: I left my watermelon in the freezer for just slightly too long but just the surface being frozen results in a rather nice texture
+Output: 
+```json
+{
+    "time": null, 
+    "location": null, 
+    "environment": null,
+    "action": "I left my watermelon in the freezer", 
+    "observation": "I notice that the surface being frozen results in a rather nice texture",           
+    "inner_thought": null
+}
+```
+
+Tweet: #QUTLoveLetters16943  Dear those two who doing the poetry assignment who were brainstorming at the bus stop at KG. Is it too late to join your course? You’re both gorgeous. And the poems you were spitting made me SWOON Yours pashunately, T.P
+Output: 
+```json
+"null"
+```
 """
 
 REVISION_PROMPT = """You are refining a previously extracted Event.
@@ -101,7 +189,7 @@ class EventExtractor:
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=1.0,
+            temperature=0.2,
         )
         event = _parse_event_json(response.output_text)
         return event
@@ -131,26 +219,6 @@ _EXTRACTOR: EventExtractor | None = None
 def _init_worker(model: str, api_key: str | None, base_url: str | None) -> None:
     global _EXTRACTOR
     _EXTRACTOR = EventExtractor(model=model, api_key=api_key, base_url=base_url)
-
-# def _process_row(
-#     row_dict: dict[str, Any],
-#     bucket_id: str,
-#     text_col: str,
-#     time_col: str | None,
-# ) -> dict[str, Any] | None:
-#     if _EXTRACTOR is None:
-#         raise RuntimeError("Extractor worker is not initialized.")
-#     tweet_text = row_dict.get(text_col)
-#     if tweet_text is None:
-#         return None
-#     tweet_time = row_dict.get(time_col) if time_col else None
-#     event = _EXTRACTOR.extract(str(tweet_text), _normalize_optional_str(tweet_time))
-#     record = dict(row_dict)
-#     record["bucket_id"] = bucket_id
-#     record["tweet_time"] = _normalize_optional_str(tweet_time)
-#     record["tweet_text"] = str(tweet_text)
-#     record["event"] = asdict(event)
-#     return record
 
 def _process_row(
     row_dict: dict[str, Any],
@@ -188,8 +256,6 @@ def _process_row(
                 "message": str(e),
             },
         }
-
-
 
 def iter_bucket_parquets(root: Path) -> Iterable[tuple[str, Path]]:
     for bucket_dir in sorted(root.glob("bucket_id=*")):
@@ -302,7 +368,7 @@ def main() -> None:
         print(f"Processing bucket {bucket_id} ...")
         df = load_bucket_dataframe(
             parquet_path,
-            limit=100
+            # limit=100
         )
         df = _select_users(df, args.user_col, args.max_users)
         total_rows = len(df)
