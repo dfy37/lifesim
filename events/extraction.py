@@ -216,6 +216,38 @@ def load_bucket_dataframe(parquet_path: Path, limit: int | None = None):
     return df
 
 
+def _select_users(df, user_col: str, max_users: int | None):
+    if max_users is None:
+        return df
+    if user_col not in df.columns:
+        raise KeyError(f"User column '{user_col}' not found in data.")
+    users = df[user_col].dropna().unique().tolist()
+    selected = set(users[:max_users])
+    return df[df[user_col].isin(selected)]
+
+
+def _aggregate_by_user(
+    records: Iterable[dict[str, Any] | None],
+    bucket_id: str,
+    user_col: str,
+) -> list[dict[str, Any]]:
+    grouped: dict[Any, dict[str, Any]] = {}
+    for record in records:
+        if record is None:
+            continue
+        user_id = record.get(user_col)
+        entry = grouped.get(user_id)
+        if entry is None:
+            entry = {
+                "bucket_id": bucket_id,
+                "user_id": user_id,
+                "posts": [],
+            }
+            grouped[user_id] = entry
+        entry["posts"].append(record)
+    return list(grouped.values())
+
+
 def write_jsonl(path: Path, records: Iterable[dict[str, Any] | None]) -> None:
     with path.open("w", encoding="utf-8") as handle:
         for record in records:
@@ -236,19 +268,26 @@ def main() -> None:
     parser.add_argument("--model", default="gpt-4o-mini")
     parser.add_argument("--text-col", default="text")
     parser.add_argument("--time-col", default="created_at")
+    parser.add_argument("--user-col", default="user_id")
     parser.add_argument("--api-key", default=None)
     parser.add_argument("--base-url", default=None)
     parser.add_argument("--workers", type=int, default=_default_workers())
+    parser.add_argument("--max-buckets", type=int, default=None)
+    parser.add_argument("--max-users", type=int, default=None)
     args = parser.parse_args()
 
     args.output_root.mkdir(parents=True, exist_ok=True)
 
+    bucket_count = 0
     for bucket_id, parquet_path in iter_bucket_parquets(args.input_root):
+        if args.max_buckets is not None and bucket_count >= args.max_buckets:
+            break
         print(f"Processing bucket {bucket_id} ...")
         df = load_bucket_dataframe(
             parquet_path,
             limit=100
         )
+        df = _select_users(df, args.user_col, args.max_users)
         total_rows = len(df)
         
         bucket_output = args.output_root / bucket_id
@@ -281,7 +320,13 @@ def main() -> None:
                         progress.update(1)
                         yield future.result()
 
-                write_jsonl(bucket_output / "events_raw.jsonl", _iter_results())
+                aggregated = _aggregate_by_user(
+                    _iter_results(),
+                    bucket_id=bucket_id,
+                    user_col=args.user_col,
+                )
+                write_jsonl(bucket_output / "events_raw.jsonl", aggregated)
+        bucket_count += 1
 
 if __name__ == "__main__":
     main()
