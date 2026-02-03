@@ -266,6 +266,14 @@ def iter_bucket_parquets(root: Path) -> Iterable[tuple[str, Path]]:
             yield bucket_dir.name, parquet_path
 
 
+def _parse_bucket_id(bucket_name: str) -> int | None:
+    prefix = "bucket_id="
+    if not bucket_name.startswith(prefix):
+        return None
+    suffix = bucket_name[len(prefix):]
+    return int(suffix) if suffix.isdigit() else None
+
+
 def load_bucket_dataframe(parquet_path: Path, limit: int | None = None):
     query = "SELECT * FROM read_parquet(?)"
     if limit is not None:
@@ -339,6 +347,7 @@ def main() -> None:
     parser.add_argument("--base-url", default=None)
     parser.add_argument("--workers", type=int, default=_default_workers())
     parser.add_argument("--max-buckets", type=int, default=None)
+    parser.add_argument("--start-bucket-id", type=int, default=None)
     parser.add_argument("--max-users", type=int, default=None)
     args = parser.parse_args()
 
@@ -346,7 +355,15 @@ def main() -> None:
 
     bucket_count = 0
     for bucket_id, parquet_path in iter_bucket_parquets(args.input_root):
-        if args.max_buckets is not None and bucket_count >= args.max_buckets:
+        bucket_numeric = _parse_bucket_id(bucket_id)
+        if args.start_bucket_id is not None:
+            if bucket_numeric is None:
+                continue
+            if bucket_numeric < args.start_bucket_id:
+                continue
+            if args.max_buckets is not None and bucket_numeric >= args.start_bucket_id + args.max_buckets:
+                continue
+        if args.start_bucket_id is None and args.max_buckets is not None and bucket_count >= args.max_buckets:
             break
         print(f"Processing bucket {bucket_id} ...")
         df = load_bucket_dataframe(
