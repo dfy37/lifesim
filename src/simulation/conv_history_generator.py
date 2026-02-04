@@ -104,7 +104,7 @@ class ConvHistoryGenerator:
     def generate(
         self,
         max_events_number: int,
-        max_conv_turns: int,
+        max_conv_turns: Optional[int] = None,
         seed: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         conv_history: List[Dict[str, Any]] = []
