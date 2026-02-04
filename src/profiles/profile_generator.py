@@ -92,8 +92,6 @@ class UserProfile:
     def __str__(self) -> str:
         return self.desc()
 
-class ProfileGenerator
-
 class UserProfileGenerator:
     def __init__(self, profiles_path: str, random_state: int = None, logger_silent: bool = False):
         self.logger = get_logger(__name__, silent=logger_silent)
