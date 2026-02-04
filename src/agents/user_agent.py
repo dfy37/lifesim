@@ -16,7 +16,7 @@ from agents.prompts import (
     USER_ACTION_PROMPT,
     USER_BELIEF_PROMPT
 )
-from agents.memory import KVMemory, SimpleMemory
+from agents.memory import KVMemory, SimpleMemory, NullMemory
 from utils.utils import parse_json_dict_response, find_closest_str_match, get_logger
 from json_repair import loads as repair_json
 
@@ -41,11 +41,23 @@ class UserAgent:
         with cls._lock:
             yield
 
-    def __init__(self, model, retriever_config, profile: Optional[str] = None, alpha : float = 0.5, logger_silent: bool = False):
+    def __init__(
+        self,
+        model,
+        retriever_config: Optional[dict] = None,
+        profile: Optional[str] = None,
+        alpha: float = 0.5,
+        logger_silent: bool = False,
+    ):
         self.model = model
         if profile:
             self.static_memory = SimpleMemory(profile)
-        self.dynamic_memory = KVMemory(retriever_config)
+        else:
+            self.static_memory = SimpleMemory()
+        if retriever_config:
+            self.dynamic_memory = KVMemory(retriever_config)
+        else:
+            self.dynamic_memory = NullMemory()
         self.emotion_chaine = []
         self.conversations = SimpleMemory()
         self.history_messages = []

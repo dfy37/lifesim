@@ -34,6 +34,12 @@ class OfflineLifeEventEngine:
         self.events = load_jsonl_data(event_sequences_path)
         self.uid2events = {event['user_id']: event for event in self.events}
         self.id2events = {event['id']: event for event in self.events}
+        self.event_index = 0
+        self.main_events = None
+        self.user_id = None
+        self.sequence_id = None
+        self.theme = None
+        self.longterm_goal = None
     
     def set_event_sequence(self, sequence_id: str):
         self.event_index = 0
@@ -56,6 +62,27 @@ class OfflineLifeEventEngine:
         self.user_id = user_id
         self.event_index = 0
         self.main_events = self.uid2events.get(user_id, [])
+        self.sequence_id = self.main_events.get('id') if isinstance(self.main_events, dict) else None
+        self.theme = self.main_events.get('theme') if isinstance(self.main_events, dict) else None
+        self.longterm_goal = self.main_events.get('longterm_goal', '') if isinstance(self.main_events, dict) else ''
+
+    def _get_event_list(self) -> list:
+        if not self.main_events:
+            return []
+        if isinstance(self.main_events, dict):
+            return self.main_events.get('events', [])
+        if isinstance(self.main_events, list):
+            return self.main_events
+        return []
+
+    def total_events(self) -> int:
+        return len(self._get_event_list())
+
+    def remaining_events(self) -> int:
+        return max(self.total_events() - self.event_index, 0)
+
+    def has_next_event(self) -> bool:
+        return self.remaining_events() > 0
 
     def get_current_user_id(self):
         return self.user_id
@@ -69,11 +96,13 @@ class OfflineLifeEventEngine:
         }
 
     def generate_event(self):
-        event = self.main_events['events'][self.event_index]
+        if not self.has_next_event():
+            return None
+        event = self._get_event_list()[self.event_index]
         formatted_event = POI_Event.from_dict(event, timezone=None)
         event['dialogue_scene'] = '\n'.join([formatted_event.desc_time(), formatted_event.desc_location(), formatted_event.desc_weather()])
-        if not event['life_event']:
-            event['life_event'] = event['event']
+        if not event.get('life_event'):
+            event['life_event'] = event.get('event', '')
         self.event_index += 1
         return event
 

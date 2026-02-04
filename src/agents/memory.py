@@ -108,3 +108,13 @@ class KVMemory:
             item['text'] = self._generate_semantic_text(key, value, use_text_strategy=self.use_text_strategy)
             item['id'] = _id
             self.retriever.add_documents([item])
+
+
+class NullMemory:
+    """Fallback memory that performs no storage or retrieval."""
+
+    def search(self, query, top_k: int = 3) -> List[Tuple]:
+        return []
+
+    def add_key_value(self, key: str, value: Any):
+        return None

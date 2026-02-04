@@ -109,7 +109,11 @@ class ConvHistoryGenerator:
     ) -> List[Dict[str, Any]]:
         conv_history: List[Dict[str, Any]] = []
         for _ in range(max_events_number):
+            if hasattr(self.life_event_engine, "has_next_event") and not self.life_event_engine.has_next_event():
+                break
             event = self.life_event_engine.generate_event()
+            if not event:
+                break
             beliefs = self.user_agent.get_beliefs()
             profile = self.user_agent.get_profile()
 
