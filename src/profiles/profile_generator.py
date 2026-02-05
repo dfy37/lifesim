@@ -8,19 +8,30 @@ from utils.utils import load_jsonl_data, get_logger
 
 @dataclass
 class UserProfile:
-    user_id: str
-    religious: str
-    employment: str
-    marital: str
-    race: str
-    income: str
-    area: str
-    age: str
-    gender: str
-    bigfive: dict
-    personality: list
-    preferences: list
-    preferences_value: dict
+    uuid: str
+    professional_persona: str
+    sports_persona: str
+    arts_persona: str
+    travel_persona: str
+    culinary_persona: str
+    persona: str
+    cultural_background: str
+    skills_and_expertise: str
+    skills_and_expertise_list: str
+    hobbies_and_interests: str
+    hobbies_and_interests_list: str
+    career_goals_and_ambitions: str
+    sex: str
+    age: int
+    marital_status: str
+    education_level: str
+    bachelors_field: str
+    occupation: str
+    city: str
+    state: str
+    zipcode: str
+    country: str
+    life_events: list
     extra: dict = field(default_factory=dict)
 
     @classmethod
@@ -30,6 +41,13 @@ class UserProfile:
         field_names = {f.name for f in fields(cls) if f.name != "extra"}
         
         known = {name: data.get(name, None) for name in field_names}
+        if known.get("age") is not None:
+            try:
+                known["age"] = int(known["age"])
+            except (TypeError, ValueError):
+                pass
+        if known.get("life_events") is None:
+            known["life_events"] = []
         extra = {k: v for k, v in data.items() if k not in field_names}
         
         return cls(**known, extra=extra)
@@ -47,46 +65,72 @@ class UserProfile:
         base_info_parts = []
 
         attrs = [
-            ("gender", "{}"),
+            ("sex", "{}"),
             ("age", "{}"),
-            ("race", "{}"),
-            ("marital", "{}"),
-            ("religious", "user's religion is {}"),
-            ("area", "usually resides in {}"),
+            ("marital_status", "{}"),
+            ("education_level", "{}"),
+            ("bachelors_field", "studied {}"),
+            ("occupation", "works as {}"),
+            ("cultural_background", "cultural background: {}"),
+            ("city", "lives in {}"),
+            ("state", "{}"),
+            ("zipcode", "zip code {}"),
+            ("country", "{}"),
         ]
 
         for attr_name, fmt in attrs:
             if attr_name in keys_to_drop:
                 continue
             value = getattr(self, attr_name, None)
-            if not value:
+            if value is None or value == "":
                 continue
-            if attr_name == "religious":
-                if value == "No religion":
-                    base_info_parts.append("no religious affiliation")
-                else:
-                    base_info_parts.append(fmt.format(value))
-            else:
-                base_info_parts.append(fmt.format(value))
+            base_info_parts.append(fmt.format(value))
 
         base_info = ", ".join(base_info_parts)
 
-        politics_econ_parts = []
-        if "income" not in keys_to_drop and self.income:
-            politics_econ_parts.append(f"the income level is {self.income}")
-        if "employment" not in keys_to_drop and self.employment:
-            politics_econ_parts.append(f"{self.employment}")
-        politics_econ_text = ", ".join(politics_econ_parts)
+        persona_parts = []
+        persona_attrs = [
+            ("persona", "Overall persona: {}"),
+            ("professional_persona", "Professional persona: {}"),
+            ("sports_persona", "Sports persona: {}"),
+            ("arts_persona", "Arts persona: {}"),
+            ("travel_persona", "Travel persona: {}"),
+            ("culinary_persona", "Culinary persona: {}"),
+        ]
+        for attr_name, fmt in persona_attrs:
+            if attr_name in keys_to_drop:
+                continue
+            value = getattr(self, attr_name, None)
+            if value:
+                persona_parts.append(fmt.format(value))
+        persona_text = " ".join(persona_parts)
 
-        personality_text = ""
-        if "personality" not in keys_to_drop and self.personality:
-            personality_text = "Personality traits include: " + "、".join(self.personality)
+        skills_text = ""
+        if "skills_and_expertise" not in keys_to_drop and self.skills_and_expertise:
+            skills_text = f"Skills and expertise: {self.skills_and_expertise}"
+        if "skills_and_expertise_list" not in keys_to_drop and self.skills_and_expertise_list:
+            extra_skills = f"Key skills: {self.skills_and_expertise_list}"
+            skills_text = " ".join([part for part in [skills_text, extra_skills] if part])
 
-        preferences_text = ""
-        if "preferences" not in keys_to_drop and self.preferences:
-            preferences_text = "Preferences expressed in daily life and interactions include: " + " ".join(self.preferences)
+        hobbies_text = ""
+        if "hobbies_and_interests" not in keys_to_drop and self.hobbies_and_interests:
+            hobbies_text = f"Hobbies and interests: {self.hobbies_and_interests}"
+        if "hobbies_and_interests_list" not in keys_to_drop and self.hobbies_and_interests_list:
+            extra_hobbies = f"Hobby list: {self.hobbies_and_interests_list}"
+            hobbies_text = " ".join([part for part in [hobbies_text, extra_hobbies] if part])
 
-        parts = [base_info, politics_econ_text, personality_text, preferences_text]
+        goals_text = ""
+        if "career_goals_and_ambitions" not in keys_to_drop and self.career_goals_and_ambitions:
+            goals_text = f"Career goals and ambitions: {self.career_goals_and_ambitions}"
+
+        life_events_text = ""
+        if "life_events" not in keys_to_drop and self.life_events:
+            if isinstance(self.life_events, list):
+                life_events_text = "Life events: " + " | ".join([str(x) for x in self.life_events])
+            else:
+                life_events_text = f"Life events: {self.life_events}"
+
+        parts = [base_info, persona_text, skills_text, hobbies_text, goals_text, life_events_text]
         return ". ".join([p for p in parts if p])
 
     def __str__(self) -> str:
@@ -104,7 +148,7 @@ class UserProfileGenerator:
             random.seed(random_state)
             random.shuffle(self.profiles)
         
-        self.id2profile = {x.user_id: x for x in self.profiles}
+        self.id2profile = {x.uuid: x for x in self.profiles}
 
     def get_profile_str(self, n: int = -1):
         strs = []
@@ -112,7 +156,7 @@ class UserProfileGenerator:
             n = len(self.profiles)
         for x in self.profiles[:n]:
             strs.append({
-                'user_id': x.user_id,
+                'uuid': x.uuid,
                 'profile': x.to_dict(), 
                 'profile_str': str(x)
             })
@@ -126,14 +170,19 @@ class UserProfileGenerator:
         """
         dims = set()
         for p in self.profiles:
-            for d in list(p.preferences_value):
+            preferences_value = getattr(p, "preferences_value", []) or []
+            for d in list(preferences_value):
                 dims.add(list(d.keys())[0])
         dims = list(dims)
+        if not dims:
+            self.logger.warning("No preference dimensions found; skipping weight calculation.")
+            return
 
         users = []
         for p in self.profiles:
             pv = {}
-            for x in p.preferences_value:
+            preferences_value = getattr(p, "preferences_value", []) or []
+            for x in preferences_value:
                 pv.update(x)
             for d in dims:
                 if d not in pv:

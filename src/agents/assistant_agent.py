@@ -182,7 +182,8 @@ class AssistantAgent:
         }])
         reply = parse_json_dict_response(reply, [])
 
-        self.user_preferences = format_preferences(reply, self.user_profile.preferences_value)
+        preferences_value = getattr(self.user_profile, "preferences_value", [])
+        self.user_preferences = format_preferences(reply, preferences_value)
         self.user_preferences_str = preferences2str(self.user_preferences)
         self.logger.info(f"[✓] Updated user profile preferences:\n{str(self.user_preferences)}")
 
