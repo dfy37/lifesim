@@ -105,7 +105,7 @@ class OfflineLifeEventEngine:
         if not self.has_next_event():
             return None
         event = self._get_event_list()[self.event_index]
-        formatted_event = POI_Event.from_dict(event, timezone=None)
+        formatted_event = LifeEvent.from_dict(event, timezone=None)
         self.event_index += 1
         return formatted_event
 
@@ -181,14 +181,6 @@ class POI_Event:
         return event_str
 
     def desc_weather(self):
-        # template = "The weather condition is {conditions}. The average temperature is {temp}°C (high of {tempmax}°C, low of {tempmin}°C)."
-        # weather_str = template.format(
-        #     conditions=self.weather['conditions'],
-        #     description=self.weather['description'],
-        #     temp=self.weather['temp'],
-        #     tempmax=self.weather['tempmax'],
-        #     tempmin=self.weather['tempmin']
-        # )
         template = "The weather condition is {description}"
         weather_str = template.format(
             description=self.weather['description']
@@ -223,6 +215,48 @@ class POI_Event:
         else:
             infos = [fun() for key, fun in key2fun.items()]
         return sep.join(infos)
+
+
+@dataclass
+class LifeEvent:
+    time: str = ""
+    location: str | None = None
+    environment: str | None = None
+    action: str = ""
+    observation: str = ""
+    inner_thought: str = ""
+    extra: dict = field(default_factory=dict)
+
+    @staticmethod
+    def convert_utc_to_target_zone(time_str, timezone: str = "America/New_York"):
+        return POI_Event.convert_utc_to_target_zone(time_str, timezone)
+
+    @classmethod
+    def from_dict(cls, data, timezone: str = None):
+        standard_keys = {f.name for f in fields(cls) if f.name != "extra"}
+        known = {name: data.get(name, None) for name in standard_keys}
+        known["environment"] = known.get("environment") or data.get("weather") or ""
+        known["action"] = known.get("action") or data.get("life_event") or data.get("event") or ""
+        known["observation"] = known.get("observation") or data.get("intent") or ""
+        known["inner_thought"] = known.get("inner_thought") or ""
+
+        if known['time']:
+            known['time'] = cls.convert_utc_to_target_zone(known["time"], timezone) if timezone else known["time"]
+
+        extras = {k: v for k, v in data.items() if k not in standard_keys}
+        return cls(**known, extra=extras)
+
+    def to_dict(self):
+        base = asdict(self)
+        base.update(self.extra)
+        base.pop("extra", None)
+        return base
+
+    def get(self, key, default=None):
+        return self.to_dict().get(key, default)
+
+    def __getitem__(self, key):
+        return self.to_dict()[key]
 
 class OnlineLifeEventEngine:
     def __init__(self, event_sequences_path, model=None, retriever=None):
