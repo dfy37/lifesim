@@ -29,17 +29,23 @@ class DeepSeek:
         )
         return response.choices[0].message.content
 
+
+
 class OfflineLifeEventEngine:
-    def __init__(self, event_sequences_path):
-        self.events = load_jsonl_data(event_sequences_path)
-        self.uid2events = {event['user_id']: event for event in self.events}
-        self.id2events = {event['id']: event for event in self.events}
+    # def __init__(self, event_sequences_path):
+    #     self.events = load_jsonl_data(event_sequences_path)
+    #     self.uid2events = {event['user_id']: event for event in self.events}
+    #     self.id2events = {event['id']: event for event in self.events}
+    #     self.event_index = 0
+    #     self.main_events = None
+    #     self.user_id = None
+    #     self.sequence_id = None
+    #     self.theme = None
+    #     self.longterm_goal = None
+    
+    def __init__(self, life_events) -> None:
+        self.main_events = life_events
         self.event_index = 0
-        self.main_events = None
-        self.user_id = None
-        self.sequence_id = None
-        self.theme = None
-        self.longterm_goal = None
     
     def set_event_sequence(self, sequence_id: str):
         self.event_index = 0
@@ -100,11 +106,8 @@ class OfflineLifeEventEngine:
             return None
         event = self._get_event_list()[self.event_index]
         formatted_event = POI_Event.from_dict(event, timezone=None)
-        event['dialogue_scene'] = '\n'.join([formatted_event.desc_time(), formatted_event.desc_location(), formatted_event.desc_weather()])
-        if not event.get('life_event'):
-            event['life_event'] = event.get('event', '')
         self.event_index += 1
-        return event
+        return formatted_event
 
 class Environment:
     def __init__(self, map) -> None:

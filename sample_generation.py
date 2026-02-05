@@ -19,8 +19,6 @@ from tools.dense_retriever import DenseRetriever
 from utils.utils import get_logger, load_jsonl_data, write_jsonl_data
 
 logger = get_logger(__name__, silent=False)
-
-
 @dataclass
 class SampleProfile:
     user_id: str
@@ -31,7 +29,6 @@ class SampleProfile:
 def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate conversation histories for profiles.")
     parser.add_argument("--profiles-path", required=True, help="Path to user profiles JSONL.")
-    parser.add_argument("--event-sequences-path", required=True, help="Path to event sequences JSONL.")
     parser.add_argument("--query-database-path", required=True, help="Path to retriever query database JSONL.")
     parser.add_argument("--output-path", required=True, help="Output JSONL path for generated histories.")
 
@@ -44,8 +41,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--max-conv-turns", type=int, default=10)
     parser.add_argument("--max-events-number", type=int, default=10)
     parser.add_argument("--max-profiles", type=int, default=-1, help="Limit number of profiles. -1 means all.")
-    parser.add_argument("--random-state", type=int, default=None)
-    parser.add_argument("--seed", type=int, default=None, help="Sampling seed for intention reranking.")
+    parser.add_argument("--seed", type=int, default=None, help="Seed for whole experiments.")
 
     parser.add_argument("--retriever-model-name", default="sentence-transformers/all-MiniLM-L6-v2")
     parser.add_argument("--retriever-collection-name", default="trajectory_event_collection")
@@ -66,7 +62,7 @@ def build_profiles(generator: UserProfileGenerator, max_profiles: int) -> List[S
     raw_profiles = generator.get_profile_str(n=max_profiles if max_profiles != -1 else -1)
     profiles = [
         SampleProfile(
-            user_id=item["user_id"],
+            user_id=item["uuid"],
             profile=item.get("profile", {}),
             profile_str=item.get("profile_str", ""),
         )
@@ -94,9 +90,9 @@ def generate_for_profile(
     max_conv_turns: int,
     seed: Optional[int],
 ) -> Optional[Dict[str, Any]]:
-    event_engine.set_user(profile.user_id)
+    event_engine.set_user(profile.uuid)
     if not event_engine.has_next_event():
-        logger.warning("No events found for user_id=%s, skipping.", profile.user_id)
+        logger.warning("No events found for user_id=%s, skipping.", profile.uuid)
         return None
 
     conv_history = conv_generator.generate(
@@ -106,7 +102,7 @@ def generate_for_profile(
     )
 
     return {
-        "user_id": profile.user_id,
+        "user_id": profile.uuid,
         "profile": profile.profile,
         "profile_str": profile.profile_str,
         "event_count": len(conv_history),
@@ -115,7 +111,7 @@ def generate_for_profile(
 
 
 def main(args: argparse.Namespace) -> None:
-    profile_generator = UserProfileGenerator(args.profiles_path, random_state=args.random_state)
+    profile_generator = UserProfileGenerator(args.profiles_path, random_state=args.seed)
     profiles = build_profiles(profile_generator, args.max_profiles)
 
     model = load_model(
@@ -144,7 +140,7 @@ def main(args: argparse.Namespace) -> None:
         batch_size=args.retriever_batch_size,
     )
 
-    event_engine = OfflineLifeEventEngine(args.event_sequences_path)
+    event_engine = OfflineLifeEventEngine()
 
     results: List[Dict[str, Any]] = []
     for profile in profiles:

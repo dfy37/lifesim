@@ -17,9 +17,9 @@ class UserProfile:
     persona: str
     cultural_background: str
     skills_and_expertise: str
-    skills_and_expertise_list: str
+    skills_and_expertise_list: list
     hobbies_and_interests: str
-    hobbies_and_interests_list: str
+    hobbies_and_interests_list: list
     career_goals_and_ambitions: str
     sex: str
     age: int
@@ -68,14 +68,12 @@ class UserProfile:
             ("sex", "{}"),
             ("age", "{}"),
             ("marital_status", "{}"),
-            ("education_level", "{}"),
+            ("education_level", "education level is {}"),
             ("bachelors_field", "studied {}"),
             ("occupation", "works as {}"),
             ("cultural_background", "cultural background: {}"),
             ("city", "lives in {}"),
             ("state", "{}"),
-            ("zipcode", "zip code {}"),
-            ("country", "{}"),
         ]
 
         for attr_name, fmt in attrs:
@@ -108,30 +106,17 @@ class UserProfile:
         skills_text = ""
         if "skills_and_expertise" not in keys_to_drop and self.skills_and_expertise:
             skills_text = f"Skills and expertise: {self.skills_and_expertise}"
-        if "skills_and_expertise_list" not in keys_to_drop and self.skills_and_expertise_list:
-            extra_skills = f"Key skills: {self.skills_and_expertise_list}"
-            skills_text = " ".join([part for part in [skills_text, extra_skills] if part])
 
         hobbies_text = ""
         if "hobbies_and_interests" not in keys_to_drop and self.hobbies_and_interests:
             hobbies_text = f"Hobbies and interests: {self.hobbies_and_interests}"
-        if "hobbies_and_interests_list" not in keys_to_drop and self.hobbies_and_interests_list:
-            extra_hobbies = f"Hobby list: {self.hobbies_and_interests_list}"
-            hobbies_text = " ".join([part for part in [hobbies_text, extra_hobbies] if part])
 
         goals_text = ""
         if "career_goals_and_ambitions" not in keys_to_drop and self.career_goals_and_ambitions:
             goals_text = f"Career goals and ambitions: {self.career_goals_and_ambitions}"
 
-        life_events_text = ""
-        if "life_events" not in keys_to_drop and self.life_events:
-            if isinstance(self.life_events, list):
-                life_events_text = "Life events: " + " | ".join([str(x) for x in self.life_events])
-            else:
-                life_events_text = f"Life events: {self.life_events}"
-
-        parts = [base_info, persona_text, skills_text, hobbies_text, goals_text, life_events_text]
-        return ". ".join([p for p in parts if p])
+        parts = [base_info, persona_text, skills_text, hobbies_text, goals_text]
+        return "\n".join([p for p in parts if p])
 
     def __str__(self) -> str:
         return self.desc()

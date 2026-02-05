@@ -2,12 +2,12 @@ python -m extraction \
   --input-root /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/data/twitter_archive_cleaned/twitter_archive_cleaned/shards \
   --output-root /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/data/events_labeled_data \
   --model /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/MODELS/Qwen3-32B \
-  --base-url http://0.0.0.0:8000/v1 \
+  --base-url http://0.0.0.0:8001/v1 \
   --api-key "123" \
   --text-col tweet_text \
   --time-col created_at \
   --workers 64 \
-  --start-bucket-id 2 \
+  --start-bucket-id 22 \
   --max-buckets 20 \
   # --max-users 10
 

@@ -48,7 +48,6 @@ class KnowledgeGraph:
     def to_json(self, indent: int = 2) -> str:
         return json.dumps(self.to_dict(), ensure_ascii=False, indent=indent)
 
-
 class UserProfileKnowledgeGraphBuilder:
     """Build a simple knowledge graph from user profiles.
 
@@ -61,9 +60,12 @@ class UserProfileKnowledgeGraphBuilder:
         self.logger = get_logger(__name__, silent=logger_silent)
 
     def build(self, profile: UserProfile) -> KnowledgeGraph:
-        description = profile.desc()
         base_triples = self._profile_attribute_triples(profile)
-        llm_triples = self._extract_triples(description)
+        fields = ["professional_persona", "sports_persona", "arts_persona", "travel_persona", "culinary_persona", "persona", "cultural_background", "career_goals_and_ambitions"]
+        llm_triples = []
+        for field in fields:
+            sub_llm_triples = self._extract_triples(getattr(profile, field))
+            llm_triples.extend(sub_llm_triples)
         graph = KnowledgeGraph(base_triples + llm_triples)
         graph.dedupe()
         return graph
@@ -81,29 +83,19 @@ class UserProfileKnowledgeGraphBuilder:
             else:
                 triples.append((subject, relation, str(value)))
 
-        add("sex", "has_sex", profile.sex)
-        add("age", "has_age", profile.age)
-        add("marital_status", "has_marital_status", profile.marital_status)
-        add("education_level", "has_education_level", profile.education_level)
-        add("bachelors_field", "has_bachelors_field", profile.bachelors_field)
-        add("occupation", "has_occupation", profile.occupation)
-        add("city", "lives_in", profile.city)
-        add("state", "lives_in_state", profile.state)
-        add("zipcode", "has_zipcode", profile.zipcode)
-        add("country", "lives_in_country", profile.country)
-        add("cultural_background", "has_cultural_background", profile.cultural_background)
-        add("persona", "has_persona", profile.persona)
-        add("professional_persona", "has_professional_persona", profile.professional_persona)
-        add("sports_persona", "has_sports_persona", profile.sports_persona)
-        add("arts_persona", "has_arts_persona", profile.arts_persona)
-        add("travel_persona", "has_travel_persona", profile.travel_persona)
-        add("culinary_persona", "has_culinary_persona", profile.culinary_persona)
-        add("skills_and_expertise", "has_skills_and_expertise", profile.skills_and_expertise)
-        add("skills_and_expertise_list", "has_skill", profile.skills_and_expertise_list)
-        add("hobbies_and_interests", "has_hobbies_and_interests", profile.hobbies_and_interests)
-        add("hobbies_and_interests_list", "has_hobby", profile.hobbies_and_interests_list)
-        add("career_goals_and_ambitions", "has_career_goals", profile.career_goals_and_ambitions)
-        add("life_events", "has_life_event", profile.life_events)
+        add("user", "has_sex", profile.sex)
+        add("user", "has_age", profile.age)
+        add("user", "has_marital_status", profile.marital_status)
+        add("user", "has_education_level", profile.education_level)
+        add("user", "has_bachelors_field", profile.bachelors_field)
+        add("user", "has_occupation", profile.occupation)
+        add("user", "lives_in", profile.city)
+
+        for skill in profile.skills_and_expertise_list:
+            add("user", "has_skill", skill)
+        
+        for hobby in profile.hobbies_and_interests_list:
+            add("user", "has_hobby", hobby)
 
         return triples
 

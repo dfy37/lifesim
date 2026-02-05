@@ -1,26 +1,23 @@
 python sample_generation.py \
-    --profiles-path <profiles.jsonl> \
-    --event-sequences-path <events.jsonl> \
-    --query-database-path <queries.jsonl> \
-    --output-path <output.jsonl> \
-    --model-name <model> \
-    --model-api-key <key> \
-    --model-path <path> \
-    --model-url <url> \
+    --profiles-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/data/demo_data/users.jsonl \
+    --query-database-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/data/intention_pool/sports.jsonl \
+    --output-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/exp_results/conv_history \
+    --model-name qwen3-32b \
+    --model-api-key "123" \
+    --model-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/MODELS/Qwen3-32B \
+    --model-url http://0.0.0.0:8000/v1 \
     --use-vllm \
-    --max-conv-turns <n> \
-    --max-events-number <n> \
-    --max-profiles <n> \
-    --random-state <n> \
-    --seed <n> \
-    --retriever-model-name <name> \
-    --retriever-collection-name <name> \
-    --retriever-embedding-dim <dim> \
-    --retriever-persist-dir <dir> \
-    --retriever-distance <cosine|l2|ip> \
-    --retriever-device <cpu|cuda> \
-    --retriever-use-custom-embeddings \
-    --retriever-text-field <field> \
-    --retriever-id-field <field> \
-    --retriever-batch-size <n> \
-    --max-retrievals <n>
+    --max-conv-turns 10 \
+    --max-events-number 10 \
+    --max-profiles 1 \
+    --seed 42 \
+    --retriever-model-name /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/MODELS/Qwen3-Embedding-0.6B \
+    --retriever-collection-name sport_intention_database \
+    --retriever-embedding-dim 1024 \
+    --retriever-persist-dir /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/exp_results/chrome_db \
+    --retriever-distance cosine \
+    --retriever-device cpu \
+    --retriever-text-field intention \
+    --retriever-id-field id \
+    --retriever-batch-size 128 \
+    --max-retrievals 3
