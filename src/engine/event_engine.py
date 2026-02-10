@@ -33,6 +33,8 @@ class OfflineLifeEventEngine:
     def __init__(self, life_events) -> None:
         self.main_events = life_events
         self.event_index = 0
+        self.logger = get_logger(__name__, silent=False)
+        self.logger.info("OfflineLifeEventEngine initialized with %s events", self.total_events())
 
     def _get_event_list(self) -> list:
         if not self.main_events:
@@ -50,13 +52,17 @@ class OfflineLifeEventEngine:
         return max(self.total_events() - self.event_index, 0)
 
     def has_next_event(self) -> bool:
-        return self.remaining_events() > 0
+        has_next = self.remaining_events() > 0
+        if not has_next:
+            self.logger.info("No more events to generate.")
+        return has_next
 
     def generate_event(self):
         if not self.has_next_event():
             return None
         event = self._get_event_list()[self.event_index]
         formatted_event = LifeEvent.from_dict(event, timezone=None)
+        self.logger.info("Generating event %s/%s", self.event_index + 1, self.total_events())
         self.event_index += 1
         return formatted_event
 
