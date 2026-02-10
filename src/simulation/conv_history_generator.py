@@ -30,13 +30,15 @@ REFINE_INTENTION_PROMPT = """请基于给定的用户意图候选，生成一个
 """
 
 
-def generate_desires(model, profile: str, beliefs: List[Any], event: Dict[str, Any]) -> List[str]:
+def generate_desires(model, profile: str, beliefs: List[Any], event: Dict[str, Any], logger=None) -> List[str]:
     prompt = DESIRE_PROMPT.format(
         profile=profile,
         event=event.get("life_event") or event.get("event", ""),
         beliefs=beliefs,
     )
     response = model.chat([{"role": "user", "content": prompt}])
+    if logger:
+        logger.info("Generated desire candidates from model response")
     data = parse_json_dict_response(response, keys=["desires"])
     desires = data.get("desires", [])
     if not isinstance(desires, list):
@@ -44,9 +46,11 @@ def generate_desires(model, profile: str, beliefs: List[Any], event: Dict[str, A
     return [d for d in desires if isinstance(d, str) and d.strip()]
 
 
-def intention_retrieval(retriever, desires: List[str], top_k: int = 5) -> List[Dict[str, Any]]:
+def intention_retrieval(retriever, desires: List[str], top_k: int = 5, logger=None) -> List[Dict[str, Any]]:
     candidates: List[Dict[str, Any]] = []
     for desire in desires:
+        if logger:
+            logger.info("Retrieving intentions for desire: %s", desire)
         results = retriever.search(query=desire, top_k=top_k)
         for res in results:
             item = res.get("data") if isinstance(res, dict) else None
@@ -73,11 +77,13 @@ def rerank_and_sample(candidates: List[Dict[str, Any]], seed: Optional[int] = No
     return chosen.get("intent", "")
 
 
-def refine_intention(model, intention: str) -> str:
+def refine_intention(model, intention: str, logger=None) -> str:
     if not intention:
         return ""
     prompt = REFINE_INTENTION_PROMPT.format(intention=intention)
     response = model.chat([{"role": "user", "content": prompt}])
+    if logger:
+        logger.info("Refining selected intention")
     data = parse_json_dict_response(response, keys=["intention"])
     refined = data.get("intention")
     return refined.strip() if isinstance(refined, str) else intention.strip()
@@ -108,19 +114,24 @@ class ConvHistoryGenerator:
         seed: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         conv_history: List[Dict[str, Any]] = []
-        for _ in range(max_events_number):
+        self.logger.info("Start conversation history generation: max_events=%s", max_events_number)
+        for event_idx in range(max_events_number):
             if hasattr(self.life_event_engine, "has_next_event") and not self.life_event_engine.has_next_event():
                 break
             event = self.life_event_engine.generate_event()
+            self.logger.info("Processing event index %s", event_idx + 1)
             if not event:
                 break
             beliefs = self.user_agent.get_beliefs()
             profile = self.user_agent.get_profile()
 
-            desires = generate_desires(self.model, profile, beliefs, event)
-            candidates = intention_retrieval(self.retriever, desires, top_k=self.max_retrievals)
+            desires = generate_desires(self.model, profile, beliefs, event, logger=self.logger)
+            self.logger.info("Generated %s desires", len(desires))
+            candidates = intention_retrieval(self.retriever, desires, top_k=self.max_retrievals, logger=self.logger)
+            self.logger.info("Retrieved %s intention candidates", len(candidates))
             selected_intention = rerank_and_sample(candidates, seed=seed)
-            refined_intention = refine_intention(self.model, selected_intention)
+            refined_intention = refine_intention(self.model, selected_intention, logger=self.logger)
+            self.logger.info("Final refined intention: %s", refined_intention)
 
             dialogue = self.fast_conv_simulator.simulate(
                 event=event,
@@ -139,4 +150,6 @@ class ConvHistoryGenerator:
             )
 
             self.user_agent.update_belief_from_event(event)
+            self.logger.info("Finished event index %s", event_idx + 1)
+        self.logger.info("Conversation history generation finished: total=%s", len(conv_history))
         return conv_history
