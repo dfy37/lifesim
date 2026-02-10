@@ -29,48 +29,10 @@ class DeepSeek:
         )
         return response.choices[0].message.content
 
-
-
 class OfflineLifeEventEngine:
-    # def __init__(self, event_sequences_path):
-    #     self.events = load_jsonl_data(event_sequences_path)
-    #     self.uid2events = {event['user_id']: event for event in self.events}
-    #     self.id2events = {event['id']: event for event in self.events}
-    #     self.event_index = 0
-    #     self.main_events = None
-    #     self.user_id = None
-    #     self.sequence_id = None
-    #     self.theme = None
-    #     self.longterm_goal = None
-    
     def __init__(self, life_events) -> None:
         self.main_events = life_events
         self.event_index = 0
-    
-    def set_event_sequence(self, sequence_id: str):
-        self.event_index = 0
-        self.main_events = self.id2events.get(sequence_id, None)
-        self.user_id = self.main_events['user_id'] if self.main_events else None
-        self.theme = self.main_events['theme'] if self.main_events else None
-        self.longterm_goal = self.main_events.get('longterm_goal', '') if self.main_events else ''
-        self.sequence_id = sequence_id
-
-    def set_user(self, user_id: str):
-        """
-        Set user profile
-        
-        - **Description**:
-            - Sets the user profile for the event generation.
-        
-        - **Args**:
-            - user_profile: A dictionary containing user profile information.
-        """
-        self.user_id = user_id
-        self.event_index = 0
-        self.main_events = self.uid2events.get(user_id, [])
-        self.sequence_id = self.main_events.get('id') if isinstance(self.main_events, dict) else None
-        self.theme = self.main_events.get('theme') if isinstance(self.main_events, dict) else None
-        self.longterm_goal = self.main_events.get('longterm_goal', '') if isinstance(self.main_events, dict) else ''
 
     def _get_event_list(self) -> list:
         if not self.main_events:
@@ -89,17 +51,6 @@ class OfflineLifeEventEngine:
 
     def has_next_event(self) -> bool:
         return self.remaining_events() > 0
-
-    def get_current_user_id(self):
-        return self.user_id
-    
-    def get_current_sequence_info(self):
-        return {
-            'user_id': self.user_id,
-            'sequence_id': self.sequence_id,
-            'theme': self.theme,
-            'longterm_goal': self.longterm_goal
-        }
 
     def generate_event(self):
         if not self.has_next_event():

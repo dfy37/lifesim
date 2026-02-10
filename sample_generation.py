@@ -63,7 +63,7 @@ def build_profiles(generator: UserProfileGenerator, max_profiles: int) -> List[S
     profiles = [
         SampleProfile(
             user_id=item["uuid"],
-            profile=item.get("profile", {}),
+            profile=item.get("profile", None),
             profile_str=item.get("profile_str", ""),
         )
         for item in raw_profiles
@@ -140,10 +140,9 @@ def main(args: argparse.Namespace) -> None:
         batch_size=args.retriever_batch_size,
     )
 
-    event_engine = OfflineLifeEventEngine()
-
     results: List[Dict[str, Any]] = []
     for profile in profiles:
+        event_engine = OfflineLifeEventEngine(profile.profile.life_events)
         user_agent = UserAgent(model=model, profile=profile.profile_str)
         conv_generator = ConvHistoryGenerator(
             life_event_engine=event_engine,

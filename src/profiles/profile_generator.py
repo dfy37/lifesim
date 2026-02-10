@@ -142,7 +142,7 @@ class UserProfileGenerator:
         for x in self.profiles[:n]:
             strs.append({
                 'uuid': x.uuid,
-                'profile': x.to_dict(), 
+                'profile': x, 
                 'profile_str': str(x)
             })
         

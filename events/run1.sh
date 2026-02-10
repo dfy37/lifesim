@@ -6,8 +6,8 @@ python -m extraction \
   --api-key "123" \
   --text-col tweet_text \
   --time-col created_at \
-  --workers 64 \
-  --start-bucket-id 22 \
+  --workers 32 \
+  --start-bucket-id 27 \
   --max-buckets 20 \
   # --max-users 10
 
