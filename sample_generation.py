@@ -90,9 +90,8 @@ def generate_for_profile(
     max_conv_turns: int,
     seed: Optional[int],
 ) -> Optional[Dict[str, Any]]:
-    event_engine.set_user(profile.uuid)
     if not event_engine.has_next_event():
-        logger.warning("No events found for user_id=%s, skipping.", profile.uuid)
+        logger.warning("No events found for user_id=%s, skipping.", profile.user_id)
         return None
 
     conv_history = conv_generator.generate(
@@ -102,7 +101,7 @@ def generate_for_profile(
     )
 
     return {
-        "user_id": profile.uuid,
+        "user_id": profile.user_id,
         "profile": profile.profile,
         "profile_str": profile.profile_str,
         "event_count": len(conv_history),
