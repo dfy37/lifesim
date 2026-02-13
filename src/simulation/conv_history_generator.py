@@ -4,30 +4,49 @@ from typing import Any, Dict, List, Optional
 
 from utils.utils import get_logger, parse_json_dict_response
 
-DESIRE_PROMPT = """你是用户意图生成助手。请基于用户画像、当前事件和用户已有的信念，生成用户可能的诉求列表。
-要求：
-- 输出 JSON，包含字段 "desires"，值为字符串数组。
-- 诉求应与事件紧密相关，贴合用户画像。
-- 只给出 3-6 条。
+DESIRE_PROMPT = """You are a user intention generation assistant. Based on the user profile, the current event, and the user's existing beliefs, generate a list of possible user desires.
 
-用户画像:
+Requirements:
+- Output JSON containing the field "desires", whose value is an array of strings.
+- The desires should be closely related to the event and aligned with the user profile.
+- Provide only 3–6 items.
+
+User Profile:
 {profile}
 
-当前事件:
+Current Event:
 {event}
 
-用户信念:
+User Beliefs:
 {beliefs}
 """
 
-REFINE_INTENTION_PROMPT = """请基于给定的用户意图候选，生成一个更清晰、具体且自然的意图表述。
-要求：
-- 仅输出 JSON，包含字段 "intention"。
-- 保持语义不变，但更简洁清晰。
+REFINE_INTENTION_PROMPT = '''You will be given one candidate user intention.
+Your task is to revise and refine it so that align with the user’s profile, and current environmental context.
+### Requirements
+- Adjust details such as subject, location, weather, time, or other contextual factors to make the event realistic and coherent with the given user profile and prior events.
+- The intent should remain essentially the same in meaning but must be expressed naturally and fit the updated event context.
+- The intent should represent a single conversational goal (i.e., the user’s focus within one dialogue turn), not a long-term plan.
+- Remove any placeholders or meaningless symbols (e.g., "NAME_1", "XXX", "...").
+### Output Format:
+Please output your final answer strictly in the following JSON structure (enclosed within ```json and ```):
+{{
+    "intention": "Describe the user’s corresponding intent under this event context."
+}}
+Provide your reasoning before the final answer. 
+In your reasoning, consider: (1) whether the event and intent satisfy the requirements; (2) whether the intent is realistically something a human would ask an AI assistant.
+### Examples:
+If the intention is “The user feels the sun is strong and wants the assistant to give hydration advice,” but the weather is cloudy, revise it to “The user has exercised for a long time and sweated a lot, wants the assistant to give hydration advice.”
 
-候选意图:
-{intention}
-"""
+### Input
+[User Profile]
+{user_profile}
+[Current Environment]
+{env}
+[Current Event and Intention]
+Current user intention: {intention}
+[Output]
+'''
 
 
 def generate_desires(model, profile: str, beliefs: List[Any], event: Dict[str, Any], logger=None) -> List[str]:
