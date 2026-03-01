@@ -1,5 +1,6 @@
 import math
 import random
+from copy import deepcopy
 from typing import Any, Dict, List, Optional
 from dataclasses import asdict
 
@@ -349,6 +350,7 @@ class ConvHistoryGenerator:
                     "event": asdict(event),
                     "intention": refined_intention,
                     "dialogue": dialogue,
+                    "beliefs": deepcopy(beliefs),
                 }
             )
 
