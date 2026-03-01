@@ -138,58 +138,95 @@ Where action is your selected action and must be one of the options provided.
 - You may first explain your reasoning, then give the final chosen action.
 """
 
-USER_BELIEF_PROMPT = """请基于最新事件，提取用户状态的关键变化，并更新用户的 belief 列表。
-### 用户画像
+USER_BELIEF_PROMPT = """Based on the latest event, extract ONLY the user's current or already occurred state changes, and update the user's belief list.
+
+Belief Definition:
+Belief refers ONLY to the user's recognized state of themselves or the external world.
+Belief describes "what is currently true" or "what has already happened and caused an impact."
+Belief must NOT contain future plans, action strategies, goals, desires, or help-seeking intentions.
+
+### User Profile
 {profile}
-### 最新事件
+### Current Event
 {event}
-### 当前 belief 列表
+### Current Belief List
 {belief_list}
+### Strict Requirements
+1. Only extract the following types of changes:
+   - Emotional changes (e.g., anxious, excited, disappointed)
+   - Physical or health condition changes
+   - Changes in cognition or judgment about something
+   - Newly formed preferences or attitudes
+2. Strictly prohibit outputting:
+   - Expressions such as "hope", "want", "plan", "intend", "seek", "try to", "prepare to"
+   - Any future execution intention
+   - Any specific action steps or solutions
+   - Multi-goal planning or strategy design
+3. Each belief must be a "state statement", NOT an "action statement".
+4. If there is no significant state change, output an empty list.
+### Output Format
+Output a JSON array wrapped inside ```json ```.
+Each belief must follow this format:
+[triple(source, relation, target), language_description, time, utterance]
+- triple must be an array: [source, relation, target]
+- language_description is a natural language description of the current state
+- time must use the event time
+- utterance is fixed to 0
 
-### 要求
-- 仅提取与“用户状态变化”有关的事实（例如情绪、健康、偏好等），不要复述事件细节。
-- 输出为列表，每条 belief 格式为：
-  [triple(source, relation, target), language_description, time, utterance]
-  - triple 为三元组，使用数组表示: [source, relation, target]
-  - language_description 为自然语言简述
-  - time 对应事件时间（可直接使用上面的事件时间）
-  - utterance 对应该事件下用户-助手对话中的第几轮对话（未知可置空）
-- 若没有显著变化，输出空列表。
-- 输出 JSON 数组，包裹在 ```json ``` 中。
-
-示例输出:
+Example:
 ```json
 [
-  [["user", "feels", "stressed"], "用户感到压力增加", "2012-04-15", 2]
+  [["user", "feels", "stressed"], "The user feels increased stress", "2012-04-15", 0]
 ]
 ```
 """
 
-USER_DIALOGUE_BELIEF_PROMPT = """请基于最新对话内容，提取用户状态的关键变化，并更新用户的 belief 列表。
-### 用户画像
+USER_DIALOGUE_BELIEF_PROMPT = """Based on the latest dialogue content, extract ONLY the user's current state changes exposed in the conversation, and update the user's belief list.
+
+Belief Definition:
+Belief refers to the user's recognized current state of themselves or the external world.
+Belief describes an already existing state, not a desired direction of change.
+Belief must NOT contain any future plans, desires, help-seeking intentions, or action intentions.
+
+### User Profile
 {profile}
-### 对话内容
+### Dialogue Content
 {dialogue}
-### 当前 belief 列表
+### Current Belief List
 {belief_list}
+### Strict Requirements
+1. Only extract:
+   - Current emotional state
+   - Physical or health condition
+   - Cognitive judgments about something
+   - Already formed attitudes or preferences
+2. Explicitly exclude:
+   - "hope..."
+   - "want..."
+   - "plan..."
+   - "intend..."
+   - "seek advice..."
+   - Any future action or solution
+   - Any time-anchored execution commitment (e.g., "starting this week...")
+3. If a sentence contains both a state and a desire,
+   keep ONLY the state part and remove the desire part.
+4. Do NOT repeat existing beliefs.
+   Prioritize adding newly emerged or more specific states.
+5. If no new state change is detected, output an empty list.
+### Output Format
+Output a JSON array wrapped inside ```json ```.
+Each belief must follow this format:
+[triple(source, relation, target), language_description, time, utterance]
+- triple must be an array: [source, relation, target]
+- language_description is a natural language description of the current state
+- time must use the event time
+- Dialogue lines are marked with [Round n]
+- utterance must be the corresponding user Round number
 
-### 要求
-- 仅提取由“用户在对话中表达/暴露出的状态变化”得到的事实（例如情绪、健康、偏好等）。
-- 不要重复已有 belief，优先补充新增或更具体的信息。
-- 输出为列表，每条 belief 格式为：
-  [triple(source, relation, target), language_description, time, utterance]
-  - triple 为三元组，使用数组表示: [source, relation, target]
-  - language_description 为自然语言简述
-  - time 对应事件时间（可直接使用上面的事件时间）
-  - 对话内容中的每一行都带有 [Round n] 标记，n 表示对话轮次。
-  - utterance 为该事实来源的用户发言对应的 Round 编号（从 1 开始计数；未知可置空）
-- 若没有显著变化，输出空列表。
-- 输出 JSON 数组，包裹在 ```json ``` 中。
-
-示例输出:
+Example:
 ```json
 [
-  [["user", "wants", "step-by-step stress relief plan"], "用户明确希望获得分步骤减压方案", "2012-04-15", 1]
+  [["user", "feels", "overwhelmed"], "The user feels overwhelmed", "2012-04-15", 1]
 ]
 ```
 """
