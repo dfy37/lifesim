@@ -161,7 +161,7 @@ class UserAgent:
         return belief_data
 
 
-    def update_belief_from_dialogue(self, dialogue: list, event: Optional[dict] = None) -> list:
+    def update_belief_from_dialogue(self, dialogue: list) -> list:
         self.logger.info("[UserAgent] Start updating beliefs from dialogue...")
         if not isinstance(dialogue, list) or not dialogue:
             return []
@@ -179,16 +179,10 @@ class UserAgent:
         if not dialogue_lines:
             return []
 
-        related_event = event or getattr(self, "event", {}) or {}
-        event_time = related_event.get("time") or related_event.get("timestamp")
-        event_text = related_event.get("life_event") or related_event.get("event", "")
-
         belief_prompt = USER_DIALOGUE_BELIEF_PROMPT.format(
             profile=self.static_memory.get(),
-            event=event_text,
             dialogue="\n".join(dialogue_lines),
             belief_list=json.dumps(self.beliefs, ensure_ascii=False),
-            event_time=event_time
         )
         with self.synchronized():
             belief_response = self.model.chat([{'role': 'user', 'content': belief_prompt}])
