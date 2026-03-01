@@ -167,6 +167,7 @@ class UserAgent:
             return []
 
         dialogue_lines = []
+        dialogue_round = 0
         for idx, turn in enumerate(dialogue, start=1):
             if not isinstance(turn, dict):
                 continue
@@ -174,7 +175,10 @@ class UserAgent:
             content = str(turn.get("content", "")).strip()
             if not role or not content:
                 continue
-            dialogue_lines.append(f"{idx}. {role}: {content}")
+            if role.lower() == "user":
+                dialogue_round += 1
+            round_no = dialogue_round if dialogue_round > 0 else 1
+            dialogue_lines.append(f"{idx}. [Round {round_no}] {role}: {content}")
 
         if not dialogue_lines:
             return []
