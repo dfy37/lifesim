@@ -164,6 +164,8 @@ Belief must NOT contain future plans, action strategies, goals, desires, or help
    - Multi-goal planning or strategy design
 3. Each belief must be a "state statement", NOT an "action statement".
 4. If there is no significant state change, output an empty list.
+5. Do NOT repeat existing beliefs.
+   Prioritize adding newly emerged or more specific states. Do not generate duplicate beliefs.
 ### Output Format
 Output a JSON array wrapped inside ```json ```.
 Each belief must follow this format:
@@ -211,7 +213,7 @@ Belief must NOT contain any future plans, desires, help-seeking intentions, or a
 3. If a sentence contains both a state and a desire,
    keep ONLY the state part and remove the desire part.
 4. Do NOT repeat existing beliefs.
-   Prioritize adding newly emerged or more specific states.
+   Prioritize adding newly emerged or more specific states. Do not generate duplicate beliefs.
 5. If no new state change is detected, output an empty list.
 ### Output Format
 Output a JSON array wrapped inside ```json ```.
