@@ -1,6 +1,7 @@
 import math
 import random
 from typing import Any, Dict, List, Optional
+from dataclasses import asdict
 
 from utils.utils import get_logger, parse_json_dict_response
 
@@ -160,17 +161,16 @@ def generate_desires(model, profile: str, beliefs: List[Any], event: Dict[str, A
     desires: List[str] = []
 
     for dimension in dimensions:
-        for _ in range(3):
-            query = generate_query_by_dimension(
-                model=model,
-                profile=profile,
-                beliefs=beliefs,
-                event=event,
-                dimension=dimension,
-                logger=logger,
-            )
-            if query:
-                desires.append(query)
+        query = generate_query_by_dimension(
+            model=model,
+            profile=profile,
+            beliefs=beliefs,
+            event=event,
+            dimension=dimension,
+            logger=logger,
+        )
+        if query:
+            desires.append(query)
 
     return desires
 
@@ -342,10 +342,11 @@ class ConvHistoryGenerator:
                 profile=profile,
                 max_turns=max_conv_turns,
             )
+            self.logger.info(f"Generated dialogue: {str(dialogue)}")
 
             conv_history.append(
                 {
-                    "event": event,
+                    "event": asdict(event),
                     "intention": refined_intention,
                     "dialogue": dialogue,
                 }

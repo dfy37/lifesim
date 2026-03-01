@@ -1,11 +1,11 @@
 python sample_generation.py \
     --profiles-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/data/demo_data/users.jsonl \
     --query-database-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/data/intention_pool/sports.jsonl \
-    --output-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/exp_results/conv_history \
+    --output-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/exp_results/conv_history.jsonl \
     --model-name qwen3-32b \
     --model-api-key "123" \
     --model-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/MODELS/Qwen3-32B \
-    --model-url http://0.0.0.0:8002/v1 \
+    --model-url http://0.0.0.0:8000/v1 \
     --use-vllm \
     --max-conv-turns 10 \
     --max-events-number 10 \

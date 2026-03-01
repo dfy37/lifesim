@@ -214,6 +214,34 @@ class LifeEvent:
 
     def __getitem__(self, key):
         return self.to_dict()[key]
+    
+    def __str__(self):
+        parts = []
+
+        if self.time:
+            parts.append(f"[{self.time}]")
+
+        main_desc = []
+
+        if self.location:
+            main_desc.append(f"at {self.location}")
+
+        if self.environment:
+            main_desc.append(f"under {self.environment}")
+
+        if self.action:
+            main_desc.append(f"{self.action}")
+
+        if main_desc:
+            parts.append(" ".join(main_desc))
+
+        if self.observation:
+            parts.append(f"(Observation: {self.observation})")
+
+        if self.inner_thought:
+            parts.append(f"(Inner thought: {self.inner_thought})")
+
+        return " ".join(parts) if parts else "Empty LifeEvent"
 
 class OnlineLifeEventEngine:
     def __init__(self, event_sequences_path, model=None, retriever=None):

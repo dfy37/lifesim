@@ -1,7 +1,7 @@
 import argparse
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -100,9 +100,11 @@ def generate_for_profile(
         seed=seed,
     )
 
+    logger.info(type(profile.profile))
+    
     return {
         "user_id": profile.user_id,
-        "profile": profile.profile,
+        "profile": asdict(profile.profile),
         "profile_str": profile.profile_str,
         "event_count": len(conv_history),
         "conv_history": conv_history,

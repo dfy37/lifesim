@@ -7,8 +7,8 @@ python -m extraction \
   --text-col tweet_text \
   --time-col created_at \
   --workers 32 \
-  --start-bucket-id 13 \
-  --max-buckets 9 \
+  --start-bucket-id 21 \
+  --max-buckets 1 \
   # --max-users 10
 
 # python -m check \

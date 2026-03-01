@@ -19,6 +19,7 @@ from agents.prompts import (
 )
 from agents.memory import KVMemory, SimpleMemory, NullMemory
 from utils.utils import parse_json_dict_response, find_closest_str_match, get_logger
+from engine.event_engine import LifeEvent
 from json_repair import loads as repair_json
 
 class UserActionEnum(str, Enum):
@@ -139,20 +140,18 @@ class UserAgent:
             return []
         return data if isinstance(data, list) else []
 
-    def update_belief_from_event(self, event: dict) -> dict:
+    def update_belief_from_event(self, event: LifeEvent) -> dict:
         self.logger.info("[UserAgent] Start updating beliefs from event...")
-        event_time = event.get("time") or event.get("timestamp")
-        utterance_index = event.get("utterance") or event.get("utterance_index")
         belief_prompt = USER_BELIEF_PROMPT.format(
             profile=self.static_memory.get(),
-            event=event.get("life_event") or event.get("event", ""),
-            dialogue_scene=event.get("dialogue_scene", ""),
-            belief_list=json.dumps(self.beliefs, ensure_ascii=False),
-            event_time=event_time,
-            utterance_index=utterance_index
+            event=str(event),
+            belief_list=json.dumps(self.beliefs, ensure_ascii=False)
         )
         with self.synchronized():
             belief_response = self.model.chat([{'role': 'user', 'content': belief_prompt}])
+        
+        self.logger.info(belief_prompt)
+        self.logger.info(belief_response)
         belief_data = self._parse_beliefs_response(belief_response)
         self._merge_beliefs(belief_data)
         self.logger.info(
