@@ -1,7 +1,7 @@
 python sample_generation.py \
     --profiles-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/data/demo_data/users.jsonl \
     --query-database-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/data/intention_pool/sports.jsonl \
-    --output-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/exp_results/conv_history.jsonl \
+    --output-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/exp_results/test_data/conv_history.jsonl \
     --model-name qwen3-32b \
     --model-api-key "123" \
     --model-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/MODELS/Qwen3-32B \
