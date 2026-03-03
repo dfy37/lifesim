@@ -33,6 +33,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--profiles-path", required=True, help="Path to user profiles JSONL.")
     parser.add_argument("--query-database-path", required=True, help="Path to retriever query database JSONL.")
     parser.add_argument("--output-path", required=True, help="Output JSONL path for generated histories.")
+    parser.add_argument("--theme", required=False, default="-1", help="Indicate the theme of events.")
 
     parser.add_argument("--model-name", required=True, help="Model name used for generation.")
     parser.add_argument("--model-api-key", default=None, help="API key for model if required.")
@@ -61,7 +62,7 @@ def get_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def build_profiles(generator: UserProfileGenerator, max_profiles: int) -> List[SampleProfile]:
+def build_profiles(generator: UserProfileGenerator, max_profiles: int, theme: str = None) -> List[SampleProfile]:
     raw_profiles = generator.get_profile_str(n=max_profiles if max_profiles != -1 else -1)
     profiles = [
         SampleProfile(
@@ -71,6 +72,8 @@ def build_profiles(generator: UserProfileGenerator, max_profiles: int) -> List[S
         )
         for item in raw_profiles
     ]
+    if theme and theme != '-1':
+        profiles = [p for p in profiles if p.profile.theme == theme]
     return profiles
 
 
@@ -116,7 +119,7 @@ def generate_for_profile(
 
 def main(args: argparse.Namespace) -> None:
     profile_generator = UserProfileGenerator(args.profiles_path, random_state=args.seed)
-    profiles = build_profiles(profile_generator, args.max_profiles)
+    profiles = build_profiles(profile_generator, args.max_profiles, args.theme)
 
     model = load_model(
         model_name=args.model_name,

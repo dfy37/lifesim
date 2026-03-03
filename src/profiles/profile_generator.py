@@ -32,6 +32,7 @@ class UserProfile:
     zipcode: str
     country: str
     life_events: list
+    theme: str
     extra: dict = field(default_factory=dict)
 
     @classmethod

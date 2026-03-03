@@ -2,14 +2,14 @@ python sample_generation.py \
     --profiles-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/data/demo_data/users.jsonl \
     --query-database-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/data/intention_pool/sports.jsonl \
     --output-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/exp_results/test_data/conv_history.jsonl \
-    --model-name qwen3-32b \
+    --model-name gpt-oss-120b \
     --model-api-key "123" \
-    --model-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/MODELS/Qwen3-32B \
-    --model-url http://0.0.0.0:8000/v1 \
+    --model-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/MODELS/gpt-oss-120b \
+    --model-url http://0.0.0.0:8001/v1 \
     --use-vllm \
     --max-conv-turns 20 \
     --max-events-number 10 \
-    --max-profiles 15 \
+    --max-profiles 5 \
     --seed 42 \
     --retriever-model-name /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/MODELS/Qwen3-Embedding-0.6B \
     --retriever-collection-name sport_intention_database \
@@ -20,4 +20,6 @@ python sample_generation.py \
     --retriever-text-field intention \
     --retriever-id-field id \
     --retriever-batch-size 128 \
-    --max-retrievals 3
+    --max-retrievals 3 \
+    --num-workers 8 \
+    --theme sport_health
