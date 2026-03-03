@@ -1,8 +1,10 @@
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 import sys
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional
+from tqdm import tqdm
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 SRC_DIR = os.path.join(ROOT_DIR, "src")
@@ -54,6 +56,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--retriever-id-field", default="id")
     parser.add_argument("--retriever-batch-size", type=int, default=128)
     parser.add_argument("--max-retrievals", type=int, default=5)
+    parser.add_argument("--num-workers", type=int, default=4, help="Number of worker threads for profile processing.")
 
     return parser.parse_args()
 
@@ -141,8 +144,7 @@ def main(args: argparse.Namespace) -> None:
         batch_size=args.retriever_batch_size,
     )
 
-    results: List[Dict[str, Any]] = []
-    for profile in profiles:
+    def process_profile(profile: SampleProfile) -> Optional[Dict[str, Any]]:
         event_engine = OfflineLifeEventEngine(profile.profile.life_events)
         user_agent = UserAgent(model=model, profile=profile.profile_str)
         conv_generator = ConvHistoryGenerator(
@@ -154,7 +156,7 @@ def main(args: argparse.Namespace) -> None:
             max_retrievals=args.max_retrievals,
         )
 
-        result = generate_for_profile(
+        return generate_for_profile(
             profile,
             event_engine,
             conv_generator,
@@ -162,8 +164,14 @@ def main(args: argparse.Namespace) -> None:
             max_conv_turns=args.max_conv_turns,
             seed=args.seed,
         )
-        if result:
-            results.append(result)
+
+    results: List[Dict[str, Any]] = []
+    with ThreadPoolExecutor(max_workers=max(1, args.num_workers)) as executor:
+        futures = [executor.submit(process_profile, profile) for profile in profiles]
+        for future in tqdm(as_completed(futures), total=len(futures), desc="Processing profiles"):
+            result = future.result()
+            if result:
+                results.append(result)
 
     os.makedirs(os.path.dirname(args.output_path) or ".", exist_ok=True)
     write_jsonl_data(results, args.output_path)
