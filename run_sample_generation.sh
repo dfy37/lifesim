@@ -7,9 +7,9 @@ python sample_generation.py \
     --model-path /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/MODELS/Qwen3-32B \
     --model-url http://0.0.0.0:8000/v1 \
     --use-vllm \
-    --max-conv-turns 10 \
+    --max-conv-turns 20 \
     --max-events-number 10 \
-    --max-profiles 1 \
+    --max-profiles 15 \
     --seed 42 \
     --retriever-model-name /inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/MODELS/Qwen3-Embedding-0.6B \
     --retriever-collection-name sport_intention_database \

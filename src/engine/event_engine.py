@@ -178,10 +178,12 @@ class POI_Event:
 class LifeEvent:
     time: str = ""
     location: str | None = None
-    environment: str | None = None
-    action: str = ""
-    observation: str = ""
-    inner_thought: str = ""
+    weather: str | None = None
+    event: str = ""
+    # environment: str | None = None
+    # action: str = ""
+    # observation: str = ""
+    # inner_thought: str = ""
     extra: dict = field(default_factory=dict)
 
     @staticmethod
@@ -192,10 +194,12 @@ class LifeEvent:
     def from_dict(cls, data, timezone: str = None):
         standard_keys = {f.name for f in fields(cls) if f.name != "extra"}
         known = {name: data.get(name, None) for name in standard_keys}
-        known["environment"] = known.get("environment") or data.get("weather") or ""
-        known["action"] = known.get("action") or data.get("life_event") or data.get("event") or ""
-        known["observation"] = known.get("observation") or data.get("intent") or ""
-        known["inner_thought"] = known.get("inner_thought") or ""
+        known["weather"] = known.get("weather") or data.get("weather") or ""
+        known["event"] = known.get("event") or data.get("event") or ""
+        # known["environment"] = known.get("environment") or data.get("weather") or ""
+        # known["action"] = known.get("action") or data.get("life_event") or data.get("event") or ""
+        # known["observation"] = known.get("observation") or data.get("intent") or ""
+        # known["inner_thought"] = known.get("inner_thought") or ""
 
         if known['time']:
             known['time'] = cls.convert_utc_to_target_zone(known["time"], timezone) if timezone else known["time"]
@@ -225,21 +229,27 @@ class LifeEvent:
 
         if self.location:
             main_desc.append(f"at {self.location}")
+        
+        if self.weather:
+            main_desc.append(f"the weather is {self.weather}")
 
-        if self.environment:
-            main_desc.append(f"under {self.environment}")
+        # if self.environment:
+        #     main_desc.append(f"under {self.environment}")
 
-        if self.action:
-            main_desc.append(f"{self.action}")
+        # if self.action:
+        #     main_desc.append(f"{self.action}")
 
         if main_desc:
             parts.append(" ".join(main_desc))
 
-        if self.observation:
-            parts.append(f"(Observation: {self.observation})")
+        if self.event:
+            parts.append(f"Encountered Life Event: {self.event}")
+        
+        # if self.observation:
+        #     parts.append(f"(Observation: {self.observation})")
 
-        if self.inner_thought:
-            parts.append(f"(Inner thought: {self.inner_thought})")
+        # if self.inner_thought:
+        #     parts.append(f"(Inner thought: {self.inner_thought})")
 
         return " ".join(parts) if parts else "Empty LifeEvent"
 

@@ -144,6 +144,7 @@ class UserAgent:
         self.logger.info("[UserAgent] Start updating beliefs from event...")
         belief_prompt = USER_BELIEF_PROMPT.format(
             profile=self.static_memory.get(),
+            event_time=event.time,
             event=str(event),
             belief_list=json.dumps(self.beliefs, ensure_ascii=False)
         )
@@ -161,7 +162,7 @@ class UserAgent:
         return belief_data
 
 
-    def update_belief_from_dialogue(self, dialogue: list) -> list:
+    def update_belief_from_dialogue(self, dialogue: list, event: LifeEvent) -> list:
         self.logger.info("[UserAgent] Start updating beliefs from dialogue...")
         if not isinstance(dialogue, list) or not dialogue:
             return []
@@ -185,6 +186,7 @@ class UserAgent:
 
         belief_prompt = USER_DIALOGUE_BELIEF_PROMPT.format(
             profile=self.static_memory.get(),
+            event_time=event.time,
             dialogue="\n".join(dialogue_lines),
             belief_list=json.dumps(self.beliefs, ensure_ascii=False),
         )

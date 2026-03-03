@@ -147,6 +147,8 @@ Belief must NOT contain future plans, action strategies, goals, desires, or help
 
 ### User Profile
 {profile}
+### Current Event Time
+{event_time}
 ### Current Event
 {event}
 ### Current Belief List
@@ -192,6 +194,8 @@ Belief must NOT contain any future plans, desires, help-seeking intentions, or a
 
 ### User Profile
 {profile}
+### Current Event Time
+{event_time}
 ### Dialogue Content
 {dialogue}
 ### Current Belief List

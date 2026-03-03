@@ -355,7 +355,7 @@ class ConvHistoryGenerator:
             )
 
             self.user_agent.update_belief_from_event(event)
-            self.user_agent.update_belief_from_dialogue(dialogue)
+            self.user_agent.update_belief_from_dialogue(dialogue, event=event)
             self.logger.info("Finished event index %s", event_idx + 1)
         self.logger.info("Conversation history generation finished: total=%s", len(conv_history))
         return conv_history
