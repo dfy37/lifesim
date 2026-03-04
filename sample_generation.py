@@ -63,7 +63,8 @@ def get_args() -> argparse.Namespace:
 
 
 def build_profiles(generator: UserProfileGenerator, max_profiles: int, theme: str = None) -> List[SampleProfile]:
-    raw_profiles = generator.get_profile_str(n=max_profiles if max_profiles != -1 else -1)
+    # raw_profiles = generator.get_profile_str(n=max_profiles if max_profiles != -1 else -1)
+    raw_profiles = generator.get_profile_str(n=-1)
     profiles = [
         SampleProfile(
             user_id=item["uuid"],
@@ -74,7 +75,7 @@ def build_profiles(generator: UserProfileGenerator, max_profiles: int, theme: st
     ]
     if theme and theme != '-1':
         profiles = [p for p in profiles if p.profile.theme == theme]
-    return profiles
+    return profiles[:max_profiles]
 
 
 def ensure_retriever_index(retriever: DenseRetriever, query_database_path: str, text_field: str, id_field: str, batch_size: int) -> None:
