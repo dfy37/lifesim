@@ -1,6 +1,5 @@
 import random
 import numpy as np
-import json
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from typing import List, Dict, Tuple, Any
@@ -11,60 +10,51 @@ from tqdm.auto import tqdm
 from engine.prompts import get_event_dimensions, get_infer_goal_prompt, RERANK_PROMPT, REWRITE_PROMPT
 from utils.utils import get_logger, parse_json_dict_response, load_jsonl_data
 
-from openai import OpenAI
-
-class DeepSeek:
-    def __init__(self, api_key, base_url=None):
-        self.client = OpenAI(
-            api_key=api_key, 
-            base_url="https://api.deepseek.com"
-        )
-    
-    def chat(self, messages, n=1):
-        response = self.client.chat.completions.create(
-            model="deepseek-chat",
-            messages=messages,
-            temperature=0.7,
-            n=n
-        )
-        return response.choices[0].message.content
-
 class OfflineLifeEventEngine:
-    def __init__(self, life_events) -> None:
-        self.main_events = life_events
+    def __init__(self, event_sequences_path):
+        self.events = load_jsonl_data(event_sequences_path)
+        self.uid2events = {event['user_id']: event for event in self.events}
+        self.id2events = {event['id']: event for event in self.events}
+    
+    def set_event_sequence(self, sequence_id: str):
         self.event_index = 0
-        self.logger = get_logger(__name__, silent=False)
-        self.logger.info("OfflineLifeEventEngine initialized with %s events", self.total_events())
+        self.main_events = self.id2events.get(sequence_id, None)
+        self.user_id = self.main_events['user_id'] if self.main_events else None
+        self.theme = self.main_events['theme'] if self.main_events else None
+        self.longterm_goal = self.main_events.get('longterm_goal', '') if self.main_events else ''
+        self.sequence_id = sequence_id
 
-    def _get_event_list(self) -> list:
-        if not self.main_events:
-            return []
-        if isinstance(self.main_events, dict):
-            return self.main_events.get('events', [])
-        if isinstance(self.main_events, list):
-            return self.main_events
-        return []
+    def set_user(self, user_id: str):
+        """
+        Set user profile
+        
+        - **Description**:
+            - Sets the user profile for the event generation.
+        
+        - **Args**:
+            - user_profile: A dictionary containing user profile information.
+        """
+        self.user_id = user_id
+        self.event_index = 0
+        self.main_events = self.uid2events.get(user_id, [])
 
-    def total_events(self) -> int:
-        return len(self._get_event_list())
-
-    def remaining_events(self) -> int:
-        return max(self.total_events() - self.event_index, 0)
-
-    def has_next_event(self) -> bool:
-        has_next = self.remaining_events() > 0
-        if not has_next:
-            self.logger.info("No more events to generate.")
-        return has_next
+    def get_current_user_id(self):
+        return self.user_id
+    
+    def get_current_sequence_info(self):
+        return {
+            'user_id': self.user_id,
+            'sequence_id': self.sequence_id,
+            'theme': self.theme,
+            'longterm_goal': self.longterm_goal
+        }
 
     def generate_event(self):
-        if not self.has_next_event():
-            return None
-        event = self._get_event_list()[self.event_index]
-        formatted_event = LifeEvent.from_dict(event, timezone=None)
-        self.logger.info("Generating event %s/%s", self.event_index + 1, self.total_events())
+        event = self.main_events['events'][self.event_index]
+        formatted_event = POI_Event.from_dict(event, timezone=None)
+        event['dialogue_scene'] = '\n'.join([formatted_event.desc_time(), formatted_event.desc_location(), formatted_event.desc_weather()])
         self.event_index += 1
-        return formatted_event
+        return event
 
 class Environment:
     def __init__(self, map) -> None:
@@ -138,6 +128,14 @@ class POI_Event:
         return event_str
 
     def desc_weather(self):
+        # template = "The weather condition is {conditions}, described as {description}. The average temperature is {temp}°C (high of {tempmax}°C, low of {tempmin}°C)."
+        # weather_str = template.format(
+        #     conditions=self.weather['conditions'],
+        #     description=self.weather['description'],
+        #     temp=self.weather['temp'],
+        #     tempmax=self.weather['tempmax'],
+        #     tempmin=self.weather['tempmin']
+        # )
         template = "The weather condition is {description}"
         weather_str = template.format(
             description=self.weather['description']
@@ -173,313 +171,6 @@ class POI_Event:
             infos = [fun() for key, fun in key2fun.items()]
         return sep.join(infos)
 
-
-@dataclass
-class LifeEvent:
-    time: str = ""
-    location: str | None = None
-    weather: str | None = None
-    event: str = ""
-    # environment: str | None = None
-    # action: str = ""
-    # observation: str = ""
-    # inner_thought: str = ""
-    extra: dict = field(default_factory=dict)
-
-    @staticmethod
-    def convert_utc_to_target_zone(time_str, timezone: str = "America/New_York"):
-        return POI_Event.convert_utc_to_target_zone(time_str, timezone)
-
-    @classmethod
-    def from_dict(cls, data, timezone: str = None):
-        standard_keys = {f.name for f in fields(cls) if f.name != "extra"}
-        known = {name: data.get(name, None) for name in standard_keys}
-        known["weather"] = known.get("weather") or data.get("weather") or ""
-        known["event"] = known.get("event") or data.get("event") or ""
-        # known["environment"] = known.get("environment") or data.get("weather") or ""
-        # known["action"] = known.get("action") or data.get("life_event") or data.get("event") or ""
-        # known["observation"] = known.get("observation") or data.get("intent") or ""
-        # known["inner_thought"] = known.get("inner_thought") or ""
-
-        if known['time']:
-            known['time'] = cls.convert_utc_to_target_zone(known["time"], timezone) if timezone else known["time"]
-
-        extras = {k: v for k, v in data.items() if k not in standard_keys}
-        return cls(**known, extra=extras)
-
-    def to_dict(self):
-        base = asdict(self)
-        base.update(self.extra)
-        base.pop("extra", None)
-        return base
-
-    def get(self, key, default=None):
-        return self.to_dict().get(key, default)
-
-    def __getitem__(self, key):
-        return self.to_dict()[key]
-    
-    def __str__(self):
-        parts = []
-
-        if self.time:
-            parts.append(f"[{self.time}]")
-
-        main_desc = []
-
-        if self.location:
-            main_desc.append(f"at {self.location}")
-        
-        if self.weather:
-            main_desc.append(f"the weather is {self.weather}")
-
-        # if self.environment:
-        #     main_desc.append(f"under {self.environment}")
-
-        # if self.action:
-        #     main_desc.append(f"{self.action}")
-
-        if main_desc:
-            parts.append(" ".join(main_desc))
-
-        if self.event:
-            parts.append(f"Encountered Life Event: {self.event}")
-        
-        # if self.observation:
-        #     parts.append(f"(Observation: {self.observation})")
-
-        # if self.inner_thought:
-        #     parts.append(f"(Inner thought: {self.inner_thought})")
-
-        return " ".join(parts) if parts else "Empty LifeEvent"
-
-class OnlineLifeEventEngine:
-    def __init__(self, event_sequences_path, model=None, retriever=None):
-        self.events = load_jsonl_data(event_sequences_path)
-        self.uid2events = {event['user_id']: event for event in self.events}
-        self.id2events = {event['id']: event for event in self.events}
-        self.model = model
-        self.retriever = retriever
-        self.logger = get_logger(__name__, silent=False)
-    
-    def set_event_sequence(self, sequence_id: str):
-        self.event_index = 0
-        self.main_events = self.id2events.get(sequence_id, None)
-        self.user_id = self.main_events['user_id'] if self.main_events else None
-        self.theme = self.main_events['theme'] if self.main_events else None
-        self.longterm_goal = self.main_events.get('longterm_goal', '') if self.main_events else ''
-        self.sequence_id = sequence_id
-        self.event_dimensions = get_event_dimensions(self.theme)
-
-    def set_user(self, user_id: str):
-        """
-        Set user profile
-        
-        - **Description**:
-            - Sets the user profile for the event generation.
-        
-        - **Args**:
-            - user_profile: A dictionary containing user profile information.
-        """
-        self.user_id = user_id
-        self.event_index = 0
-        self.main_events = self.uid2events.get(user_id, [])
-    
-    def set_event_index(self, index: int):
-        self.event_index = index
-
-    def get_current_user_id(self):
-        return self.user_id
-    
-    def get_current_sequence_info(self):
-        return {
-            'user_id': self.user_id,
-            'sequence_id': self.sequence_id,
-            'theme': self.theme,
-            'longterm_goal': self.longterm_goal
-        }
-
-    def generate_environment(self):
-        event = self.main_events['events'][self.event_index]
-        formatted_event = POI_Event.from_dict(event, timezone=None)
-        event['dialogue_scene'] = '\n'.join([formatted_event.desc_time(), formatted_event.desc_location(), formatted_event.desc_weather()])
-        self.event_index += 1
-        return event
-
-    def get_event_context(self, event_results):
-        if not event_results:
-            return "None"
-        
-        event_texts = []
-        for i, res in enumerate(event_results):
-            if 'selected_event' in res and 'trajectory_point' in res:
-                event = res['selected_event']['event']
-                intent = res['selected_event'].get('intent', '')
-                time = res['trajectory_point'].get('time')
-                location = res['trajectory_point'].get('location')
-                weather = res['trajectory_point'].get('weather')
-            else:
-                event = res.get('life_event') or res.get('event')
-                intent = res.get('intent', '')
-                time = res.get('time')
-                location = res.get('location')
-                weather = res.get('weather')
-            formatted_event = POI_Event.from_dict({
-                'time': time,
-                'location': location,
-                'life_event': event,
-                'intent': intent,
-                'weather': weather
-            }, timezone=None)
-            event_desc = f"({i+1}) {formatted_event.desc(keys_to_drop=['event'])}"
-            event_texts.append(event_desc)
-        
-        return "\n".join(event_texts)
-    
-    def generate_query_by_dimension(self, user_profile: str, event_context: str, location_desc: str, dimension: str, goal: str) -> str:
-        dimension_prompt = self.event_dimensions.get(dimension, None)
-        prompt = dimension_prompt.format(
-            user_profile=user_profile,
-            location_desc=location_desc,
-            event_sequences=event_context,
-            goal=goal
-        )
-        response = self.model.chat([{'role': 'user', 'content': prompt}])
-        response = parse_json_dict_response(response, keys=['event']).get('event', None)
-        self.logger.info(f"Generated query for dimension {dimension}: {response}")
-        return response
-
-    def retrieve_similar_events(self, query: str, top_k: int = 3) -> List[Dict]:
-        if not query:
-            return []
-        similar_events = self.retriever.search(query=query, top_k=top_k)
-        similar_events = [e['data'] for e in similar_events]
-        return similar_events
-    
-    def rerank_events(self, events: List[Dict], user_profile: str,
-                     location_desc: str, event_context: str, goal: str, n_keep: int = 3) -> List[Dict]:
-        events_text = "\n".join([f"({i+1}) {event['event']}" for i, event in enumerate(events)])
-
-        prompt = RERANK_PROMPT.format(
-            user_profile=user_profile,
-            location_desc=location_desc,
-            event_sequences=event_context,
-            events_text=events_text,
-            goal=goal
-        )
-
-        response = self.model.chat([{'role': 'user', 'content': prompt}])
-        response = parse_json_dict_response(response, keys=['ranked_events', 'has_possible_event'])
-        self.logger.info(f"Rerank response: {response}")
-        try:
-            has_possible_event = response.get('has_possible_event', 'false')
-            if isinstance(has_possible_event, str):
-                has_possible_event = has_possible_event.lower() == 'true'
-            elif not isinstance(has_possible_event, bool):
-                has_possible_event = False
-            if not has_possible_event:
-                return []
-            rank_indices = response.get('ranked_events', [])
-            rank_indices = [int(i) - 1 for i in rank_indices]
-            reranked_events = [events[i] for i in rank_indices if 0 <= i < len(events)]
-            return reranked_events[:n_keep]
-        except:
-            return []
-
-    def softmax_sampling(self, events: List[Dict]) -> Dict:
-        if not events:
-            return None
-
-        ranks = np.arange(1, len(events) + 1)
-        inverse_ranks = - ranks
-
-        probabilities = np.exp(inverse_ranks) / np.sum(np.exp(inverse_ranks))
-
-        selected_idx = np.random.choice(len(events), p=probabilities)
-        return events[selected_idx]
-
-    def rewrite_event(self, user_profile: str, location_desc: str, event_context: str, selected_event: dict, goal: str):
-        prompt = REWRITE_PROMPT.format(
-            user_profile=user_profile,
-            location_desc=location_desc,
-            event_sequences=event_context,
-            event_text=selected_event['event'],
-            intent=selected_event.get('intent', ''),
-            goal=goal
-        )
-
-        response = self.model.chat([{'role': 'user', 'content': prompt}])
-        response = parse_json_dict_response(response, keys=['event', 'intent'])
-        self.logger.info(f"Rewritten event: {response.get('event', '')}")
-        self.logger.info(f"Rewritten intent: {response.get('intent', '')}")
-
-        if response.get('event', None):
-            selected_event['event'] = response['event']
-        if response.get('intent', None):
-            selected_event['intent'] = response['intent']
-
-        return selected_event
-
-    def generate_event(self, user_profile: str = None, history_events: List[Dict] = None, goal: str = ''):
-        event = self.main_events['events'][self.event_index]
-        formatted_event = POI_Event.from_dict(event, timezone=None)
-        event['dialogue_scene'] = '\n'.join([formatted_event.desc_time(), formatted_event.desc_location(), formatted_event.desc_weather()])
-        self.event_index += 1
-
-        if not self.model or not self.retriever or not user_profile:
-            if not event.get('life_event'):
-                event['life_event'] = event.get('event')
-            return event
-
-        event_context = self.get_event_context(history_events or [])
-        location_desc = formatted_event.desc(keys_to_drop=['life_event', 'intent'])
-        goal = goal or self.longterm_goal
-
-        dimensions = list(self.event_dimensions.keys())
-        all_candidate_events = []
-        for dimension in dimensions:
-            self.logger.info(f"Generating query for dimension: {dimension}")
-            query = self.generate_query_by_dimension(
-                user_profile,
-                event_context,
-                location_desc,
-                dimension,
-                goal=goal
-            )
-
-            similar_events = self.retrieve_similar_events(query, top_k=3)
-            all_candidate_events.extend(similar_events)
-
-        self.logger.info(f"Total candidate events: {len(all_candidate_events)}")
-        reranked_events = self.rerank_events(
-            all_candidate_events,
-            user_profile=user_profile,
-            location_desc=location_desc,
-            event_context=event_context,
-            goal=goal,
-            n_keep=3
-        )
-
-        selected_event = self.softmax_sampling(reranked_events)
-        if selected_event:
-            self.logger.info(f"Selected event: {selected_event.get('event', '')}")  
-            selected_event = self.rewrite_event(
-                user_profile=user_profile,
-                location_desc=location_desc,
-                event_context=event_context,
-                selected_event=selected_event,
-                goal=goal
-            )
-
-            event['event'] = selected_event.get('event', event.get('event'))
-            event['life_event'] = selected_event.get('event', event.get('life_event'))
-            event['intent'] = selected_event.get('intent', event.get('intent'))
-            event['sub_intents'] = selected_event.get('sub_intents', event.get('sub_intents', []))
-        else:
-            if not event.get('life_event'):
-                event['life_event'] = event.get('event')
-
-        return event
 
 class TrajectoryEventMatcher:
     def __init__(self, event_database: List[Dict], retriever, model, theme: str, theme_tags: List[str], logger_silent: bool = False):

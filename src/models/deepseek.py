@@ -1,17 +1,18 @@
 from openai import OpenAI
 
 class DeepSeek:
-    def __init__(self, api_key):
+    def __init__(self, api_key, model="deepseek-chat"):
         self.client = OpenAI(
             api_key=api_key, 
             base_url="https://api.deepseek.com"
         )
+        self.model = model
         self.messages = []
     
     def chat(self, messages):
         try:
             response = self.client.chat.completions.create(
-                model="deepseek-chat",
+                model=self.model,
                 messages=messages,
                 temperature=1.0
             )

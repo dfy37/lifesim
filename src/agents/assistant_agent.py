@@ -3,7 +3,6 @@ from typing import List, Dict, Optional
 
 from agents.prompts import (
     ASSISTANT_CONV_PROMPT, 
-    ASSISTANT_REVISE_CONV_PROMPT,
     ASSISTANT_INTENT_PROMPT,
     ASSISTANT_CONV_SYSTEM_PROMPT, 
     ASSISTANT_PROFILE_SUMMARY_PROMPT, 
@@ -39,10 +38,19 @@ class AssistantAgent:
 
     def _build_system_prompt(self, event: dict):
         profile_text = self.user_preferences_str
-        self.system_prompt = ASSISTANT_CONV_SYSTEM_PROMPT.format(
-            profile=profile_text,
-            dialogue_scene=event['dialogue_scene']
-        )
+        if 'conv_history' in event:
+            self.system_prompt = ASSISTANT_CONV_SYSTEM_PROMPT.format(
+                profile=profile_text,
+                dialogue_scene=event['dialogue_scene'],
+                conv_history='\n'.join(event['conv_history'])
+            )
+        else:
+            self.system_prompt = ASSISTANT_CONV_SYSTEM_PROMPT.format(
+                profile=profile_text,
+                dialogue_scene=event['dialogue_scene'],
+                conv_history=''
+            )
+        self.logger.info(f"Assistant system prompt: {self.system_prompt}")
         return self.system_prompt
     
     def _build_user_profile(self, profile: UserProfile):
@@ -56,10 +64,25 @@ class AssistantAgent:
                 'role': 'system',
                 'content': self.system_prompt
             })
+
+        # Intent prediction
+        intent_prompt = ASSISTANT_INTENT_PROMPT.format(
+            profile=self.user_preferences_str,
+            dialogue_scene=event['dialogue_scene'],
+            conversation_context=self.conversations.get(),
+        )
+        intent = self.model.chat([{
+            'role': 'user',
+            'content': intent_prompt
+        }])
+        
+        self.intents.append(intent)
         
         # Conversation
+        
         prompt = ASSISTANT_CONV_PROMPT.format(
-            content=input
+            content=input,
+            intent=intent
         ).strip()
 
         if use_key_info_memory and len(self.messages) > 1:
@@ -80,9 +103,9 @@ class AssistantAgent:
         if not reply:
             reply = ""
 
-        self.messages[-1]['content'] = ASSISTANT_CONV_PROMPT.format(
+        self.messages[-1]['content'] = prompt = ASSISTANT_CONV_PROMPT.format(
             content=input,
-            intent=""
+            intent=intent
         ).strip()
 
         self.messages.append({
@@ -92,43 +115,7 @@ class AssistantAgent:
 
         self.conversations.add(f'Assistant: {reply}')
 
-        return reply
-
-    def rollback_last_turn(self):
-        assert self.messages[-1]['role'] == 'assistant', self.messages[-1]
-        self.messages = self.messages[:-2]
-        self.conversations.kpop(2)
-    
-    def revise_last_turn(self, advice: str, input: str):
-        self.rollback_last_turn()
-        self.conversations.add(f'User: {input}')
-        # Conversation
-        prompt = ASSISTANT_REVISE_CONV_PROMPT.format(
-            content=input,
-            advice=advice
-        ).strip()
-
-        self.messages.append({
-            'role': 'user',
-            'content': prompt
-        })
-
-        reply = self.model.chat(self.messages)
-        if not reply:
-            reply = ""
-        
-        self.messages[-1]['content'] = ASSISTANT_CONV_PROMPT.format(
-            content=input
-        ).strip()
-
-        self.messages.append({
-            'role': 'assistant',
-            'content': reply
-        })
-        self.conversations.add(f'Assistant: {reply}')
-
-        return reply
-
+        return intent, reply
 
     def summarize(self, event, dimensions, use_profile_memory: bool = False, use_key_info_memory: bool = False) -> List[Dict]:
         dimensions_template_dic = {x['dimension']: x for x in self.dimensions_template}
@@ -182,12 +169,15 @@ class AssistantAgent:
         }])
         reply = parse_json_dict_response(reply, [])
 
-        preferences_value = getattr(self.user_profile, "preferences_value", [])
-        self.user_preferences = format_preferences(reply, preferences_value)
+        self.user_preferences = format_preferences(reply, self.user_profile.preferences_value)
         self.user_preferences_str = preferences2str(self.user_preferences)
         self.logger.info(f"[✓] Updated user profile preferences:\n{str(self.user_preferences)}")
 
         return self.user_preferences
+
+    def rollback_last_turn(self):
+        assert self.messages[-1]['role'] == 'assistant', self.messages[-1]
+        self.messages = self.messages[:-2]
 
     def reinit(self):
         self.history_messages.append(self.messages.copy())

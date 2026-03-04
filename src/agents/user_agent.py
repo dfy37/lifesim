@@ -4,23 +4,17 @@ import json
 import numpy as np
 import threading
 import contextlib
-import re
 from typing import List, Optional
 
 from agents.prompts import (
     USER_CONV_SYSTEM_PROMPT,
     USER_CONV_PROMPT,
-    USER_REVISE_CONV_PROMPT,
     USER_MEMORY_PROMPT,
     USER_EMOTION_PROMPT,
-    USER_ACTION_PROMPT,
-    USER_BELIEF_PROMPT,
-    USER_DIALOGUE_BELIEF_PROMPT
+    USER_ACTION_PROMPT
 )
-from agents.memory import KVMemory, SimpleMemory, NullMemory
+from agents.memory import KVMemory, SimpleMemory
 from utils.utils import parse_json_dict_response, find_closest_str_match, get_logger
-from engine.event_engine import LifeEvent
-from json_repair import loads as repair_json
 
 class UserActionEnum(str, Enum):
     END_CONVERSATION = "End Conversation"
@@ -43,30 +37,16 @@ class UserAgent:
         with cls._lock:
             yield
 
-    def __init__(
-        self,
-        model,
-        retriever_config: Optional[dict] = None,
-        profile: Optional[str] = None,
-        alpha: float = 0.5,
-        logger_silent: bool = False,
-    ):
+    def __init__(self, model, retriever_config, profile: Optional[str] = None, alpha : float = 0.5, logger_silent: bool = False):
         self.model = model
         if profile:
             self.static_memory = SimpleMemory(profile)
-        else:
-            self.static_memory = SimpleMemory()
-        if retriever_config:
-            self.dynamic_memory = KVMemory(retriever_config)
-        else:
-            self.dynamic_memory = NullMemory()
+        self.dynamic_memory = KVMemory(retriever_config)
         self.emotion_chaine = []
         self.conversations = SimpleMemory()
         self.history_messages = []
         self.messages = []
         self.action_space = UserActionEnum
-        self.states = []
-        self.beliefs = []
 
         # Memory perception coefficient
         self.alpha = alpha
@@ -83,122 +63,6 @@ class UserAgent:
         :param event: scenario event
         """
         self.event = event
-
-    def _merge_beliefs(self, new_beliefs: list) -> None:
-        if not isinstance(new_beliefs, list):
-            return
-        existing = {self._belief_key(belief) for belief in self.beliefs}
-        for belief in new_beliefs:
-            normalized = self._normalize_belief(belief)
-            if normalized is None:
-                continue
-            key = self._belief_key(normalized)
-            if key in existing:
-                continue
-            existing.add(key)
-            self.beliefs.append(normalized)
-
-    @staticmethod
-    def _belief_key(belief: list) -> tuple:
-        triple, description, time, utterance = belief
-        return (tuple(triple), description, time, utterance)
-
-    @staticmethod
-    def _normalize_belief(belief: list | tuple) -> list | None:
-        if not isinstance(belief, (list, tuple)) or len(belief) != 4:
-            return None
-        triple, description, time, utterance = belief
-        if not isinstance(triple, (list, tuple)) or len(triple) != 3:
-            return None
-        source, relation, target = triple
-        triple_norm = [
-            str(source).strip(),
-            str(relation).strip(),
-            str(target).strip()
-        ]
-        if any(not value for value in triple_norm):
-            return None
-        description_norm = str(description).strip() if description is not None else ""
-        time_norm = str(time).strip() if time is not None else None
-        utterance_norm = None
-        if utterance is not None and str(utterance).strip():
-            try:
-                utterance_norm = int(utterance)
-            except (TypeError, ValueError):
-                utterance_norm = None
-        return [triple_norm, description_norm, time_norm, utterance_norm]
-
-    @staticmethod
-    def _parse_beliefs_response(text: str) -> list:
-        if not isinstance(text, str) or not text.strip():
-            return []
-        match = re.search(r"```json\s*([\s\S]*?)\s*```", text)
-        json_str = match.group(1).strip() if match else text.strip()
-        try:
-            data = repair_json(json_str)
-        except Exception:
-            return []
-        return data if isinstance(data, list) else []
-
-    def update_belief_from_event(self, event: LifeEvent) -> dict:
-        self.logger.info("[UserAgent] Start updating beliefs from event...")
-        belief_prompt = USER_BELIEF_PROMPT.format(
-            profile=self.static_memory.get(),
-            event_time=event.time,
-            event=str(event),
-            belief_list=json.dumps(self.beliefs, ensure_ascii=False)
-        )
-        with self.synchronized():
-            belief_response = self.model.chat([{'role': 'user', 'content': belief_prompt}])
-        
-        self.logger.info(belief_prompt)
-        self.logger.info(belief_response)
-        belief_data = self._parse_beliefs_response(belief_response)
-        self._merge_beliefs(belief_data)
-        self.logger.info(
-            "[UserAgent] Beliefs updated: "
-            f"count={len(self.beliefs)}"
-        )
-        return belief_data
-
-
-    def update_belief_from_dialogue(self, dialogue: list, event: LifeEvent) -> list:
-        self.logger.info("[UserAgent] Start updating beliefs from dialogue...")
-        if not isinstance(dialogue, list) or not dialogue:
-            return []
-
-        dialogue_lines = []
-        dialogue_round = 0
-        for idx, turn in enumerate(dialogue, start=1):
-            if not isinstance(turn, dict):
-                continue
-            role = str(turn.get("role", "")).strip()
-            content = str(turn.get("content", "")).strip()
-            if not role or not content:
-                continue
-            if role.lower() == "user":
-                dialogue_round += 1
-            round_no = dialogue_round if dialogue_round > 0 else 1
-            dialogue_lines.append(f"{idx}. [Round {round_no}] {role}: {content}")
-
-        if not dialogue_lines:
-            return []
-
-        belief_prompt = USER_DIALOGUE_BELIEF_PROMPT.format(
-            profile=self.static_memory.get(),
-            event_time=event.time,
-            dialogue="\n".join(dialogue_lines),
-            belief_list=json.dumps(self.beliefs, ensure_ascii=False),
-        )
-        with self.synchronized():
-            belief_response = self.model.chat([{'role': 'user', 'content': belief_prompt}])
-        belief_data = self._parse_beliefs_response(belief_response)
-        self._merge_beliefs(belief_data)
-        self.logger.info(
-            "[UserAgent] Beliefs updated from dialogue: "
-            f"count={len(self.beliefs)}"
-        )
-        return belief_data
 
     def _build_chat_system_prompt(self) -> str:
         profile = self.static_memory.get()
@@ -286,7 +150,6 @@ class UserAgent:
         )
         with self.synchronized():
             emotion_response = self.model.chat([{'role': 'user', 'content': emotion_prompt}])
-        self.logger.info(f"[UserAgent] Emotion reasoning: {emotion_response}")
         emotion = parse_json_dict_response(emotion_response, ['emotion'])['emotion']
         
         if not emotion:
@@ -311,7 +174,6 @@ class UserAgent:
         )
         with self.synchronized():
             action_response = self.model.chat([{'role': 'user', 'content': action_prompt}])
-        self.logger.info(f"[UserAgent] Action reasoning: {action_response}")
         action_response = parse_json_dict_response(action_response, ['action'])['action']
 
         action = self.select_action(action_response)
@@ -342,11 +204,8 @@ class UserAgent:
             self.logger.error(f"Action selection error: {e}")
             return self.action_space.CONTINUE
 
-    def set_messages(self, messages: List[dict]):
-        self.messages = messages
-
     def respond(self, prompt: str, use_emotion_chain: bool = False, use_dynamic_memory: bool = False) -> dict:      
-        memory_perception = ''
+        memory_perception = '',
         S = -1 
         if use_dynamic_memory and len(prompt) > 0:
             memory_perception, S = self._process_dynamic_memory(prompt)
@@ -354,12 +213,10 @@ class UserAgent:
         self.conversations.add(f"Assistant: {prompt}")
 
         emotion = ''
-        if use_emotion_chain and len(prompt) > 0 and len(self.messages) > 1:
+        if use_emotion_chain:
             emotion = self._analyze_emotion(memory_perception)
-        else:
-            emotion = "neutral"
 
-        if len(prompt) > 0 and len(self.messages) > 4:
+        if len(prompt) > 0 and len(self.messages) > 2:
             action = self._decide_action(memory_perception, emotion)
         else:
             action = self.action_space.CONTINUE
@@ -373,19 +230,14 @@ class UserAgent:
 
         self.logger.info("[UserAgent] Start replying...")
         prompt = USER_CONV_PROMPT.format(
-            content=f"助手回复: {prompt}" if len(prompt) > 0 else "",
-            perception=f"当前记忆感知: {memory_perception}" if len(memory_perception) > 0 else "",
-            emotion=f"当前用户情绪: {emotion}" if len(emotion) > 0 else "",
+            content=f"Assistant utterance: {prompt}" if len(prompt) > 0 else "",
+            perception=f"Current user memory perception: {memory_perception}" if len(memory_perception) > 0 else "",
+            emotion=f"Current user emotion: {emotion}" if len(emotion) > 0 else "",
         ).strip()
         
         if len(self.messages) < 1:
+            self.system_prompt = self._build_chat_system_prompt()
             self.messages.append({
-                'role': 'system',
-                'content': self.system_prompt
-            })
-
-        if self.messages[0]['role'] != 'system':
-            self.messages.insert(0, {
                 'role': 'system',
                 'content': self.system_prompt
             })
@@ -403,12 +255,6 @@ class UserAgent:
             'content': reply_content
         })
         self.conversations.add(f"User: {reply_content}")
-        self.states.append({
-            'action': action,
-            'emotion': emotion,
-            'memory_perception': memory_perception,
-            'memory_similarity': S
-        })
 
         result =  {
             'action': action,
@@ -423,49 +269,6 @@ class UserAgent:
         assert self.messages[-1]['role'] == 'assistant', self.messages[-1]
         self.messages = self.messages[:-2]
         self.conversations.kpop(2)
-    
-    def revise_last_turn(self, advice: str, prompt: str):
-        self.rollback_last_turn()
-        self.conversations.add(f"Assistant: {prompt}")
-
-        emotion = self.states[-1]['emotion']
-        memory_perception = self.states[-1]['memory_perception']
-
-        self.logger.info("[UserAgent] Start revising...")
-        prompt = USER_REVISE_CONV_PROMPT.format(
-            content=f"助手回复: {prompt}" if len(prompt) > 0 else "",
-            perception=f"当前记忆感知: {memory_perception}" if len(memory_perception) > 0 else "",
-            emotion=f"当前用户情绪: {emotion}" if len(emotion) > 0 else "",
-            advice=f"请根据以下建议给出你的回复: {advice}"
-        ).strip()
-
-        self.messages.append({
-            'role': 'user',
-            'content': prompt
-        })
-
-        with self.synchronized():
-            reply_content = self.model.chat(self.messages)
-
-        self.messages[-1]['content'] = USER_CONV_PROMPT.format(
-            content=f"助手回复: {prompt}" if len(prompt) > 0 else "",
-            perception=f"当前记忆感知: {memory_perception}" if len(memory_perception) > 0 else "",
-            emotion=f"当前用户情绪: {emotion}" if len(emotion) > 0 else ""
-        )
-
-        self.messages.append({
-            'role': 'assistant',
-            'content': reply_content
-        })
-        self.conversations.add(f"User: {reply_content}")
-        result =  {
-            'action': self.states[-1]['action'],
-            'response': reply_content,
-            'memory_similarity': self.states[-1]['memory_similarity'],
-            'emotion': emotion
-        }
-
-        return result
 
     def reinit(self):
         self.history_messages.append(self.messages.copy())
@@ -474,9 +277,6 @@ class UserAgent:
 
     def get_profile(self) -> dict:
         return self.static_memory.get()
-
-    def get_beliefs(self) -> list:
-        return list(self.beliefs)
     
     def save(self, path):
         with open(path, "w", encoding="utf-8") as f:

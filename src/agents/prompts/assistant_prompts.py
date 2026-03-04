@@ -1,5 +1,7 @@
 ASSISTANT_CONV_SYSTEM_PROMPT = """You are a virtual AI assistant. Your goal is to interact with the user, and meet the user’s needs.
 You could refer to previous conversation history and predicted user profile to generate your response.
+### Previous Conversation History
+{conv_history}
 ### User Background
 [Predicted User Profile]
 {profile}
@@ -13,12 +15,8 @@ You could refer to previous conversation history and predicted user profile to g
 * Before responding, you may receive memory summaries related to the current message, derived from previous conversations. Use them if they help you better understand the user; otherwise, ignore them.
 """
 
-ASSISTANT_CONV_PROMPT = """User utterance: {content}"""
-
-ASSISTANT_REVISE_CONV_PROMPT = """用户话语: {content}
-
-请根据以下建议修改你的回复: {advice}
-"""
+ASSISTANT_CONV_PROMPT = """User utterance: {content}
+Predicted user intention: {intent}"""
 
 ASSISTANT_INTENT_PROMPT = """You are a virtual AI assistant. Your goal is to interact with the user, infer the user’s intention throughout the conversation.
 ### Requirements

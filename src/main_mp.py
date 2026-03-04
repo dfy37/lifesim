@@ -101,7 +101,7 @@ def run_single_simulation(args_tuple):
         sim.init_env(sequence_id)
         sim.run_simulation(
             n_events=n_events,
-            n_rounds=3,
+            n_rounds=2,
             **config
         )
         sim.save(path=os.path.join(logs_path, f'{exp_name}/logs_{idx}'))
