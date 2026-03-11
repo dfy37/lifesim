@@ -92,6 +92,37 @@ python src/main_mp.py \
 
 (Evaluation)
 
+After simulation, you can evaluate assistant quality with the evaluator pipeline in `src/evaluation/eval.py` (and the corresponding analysis workflow in `src/evaluation/eval.ipynb`). The evaluation is organized as **LLM-as-a-judge** over multiple dimensions:
+
+- **IR (Intent Recognition):** whether predicted intent matches the ground-truth intent checklist.
+- **IC (Intent Completion):** whether assistant replies fulfill each intent dimension in context.
+- **NAT (Naturalness):** 1–5 rating for fluency and conversational naturalness.
+- **COH (Coherence):** 1–5 rating for logical consistency and contextual continuity.
+- **PA (Preference Alignment):** whether replies align with each user preference dimension.
+- **EA (Environment Alignment):** 1–5 rating for scene/environment feasibility and constraint awareness.
+- **RR (Rigid Reasoning):** binary flag for whether the assistant fails to adapt after new constraints.
+
+You can now run evaluation directly from bash:
+
+```bash
+python src/evaluation/eval.py \
+  --logs_root /path/to/logs_root \
+  --themes main_user_Qwen3-32B_assistant_gpt-5_total \
+  --output_root /path/to/eval_outputs \
+  --evaluator gpt_oss_120b \
+  --base_url http://0.0.0.0:8002/v1 \
+  --api_key <EVAL_API_KEY> \
+  --metrics ir ic nat coh pa ea rr \
+  --max_workers 32
+```
+
+Common options:
+- `--themes`: one or more experiment folders under `logs_root`.
+- `--metrics`: choose any subset of `ir ic nat coh pa ea rr`.
+- `--model_path`: override evaluator model name/path when your endpoint expects a different model id.
+
+`eval.ipynb` additionally shows post-processing and aggregation patterns (e.g., parsing judge outputs, computing per-theme/per-model scores, and plotting).
+
 ## 6. Citation
 
 If you use this codebase in academic work, please cite the corresponding paper/project artifact (to be added by maintainers).

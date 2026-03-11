@@ -1,14 +1,38 @@
 import os
+import argparse
 import json
-import numpy as np
-import json_repair
-from tqdm.auto import tqdm
-from openai import OpenAI
+try:
+    from tqdm.auto import tqdm
+except ImportError:
+    class _DummyTqdm:
+        def __init__(self, iterable=None, **kwargs):
+            self.iterable = iterable
+        def __enter__(self):
+            return self
+        def __exit__(self, exc_type, exc, tb):
+            return False
+        def update(self, n=1):
+            return None
+        def set_postfix(self, *args, **kwargs):
+            return None
+
+    def tqdm(iterable=None, **kwargs):
+        return _DummyTqdm(iterable=iterable, **kwargs)
+
+try:
+    from openai import OpenAI
+except ImportError:
+    OpenAI = None
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 import time
 import re
 
+
+
+def _require_openai():
+    if OpenAI is None:
+        raise ImportError("openai package is required to run evaluation. Please install dependencies from src/requirements.txt.")
 def load_jsonl_data(path):
     data = []
     with open(path) as reader:
@@ -21,8 +45,8 @@ def write_jsonl_data(data, path):
         for row in data:
             writer.write(json.dumps(row) + "\n")
 
-def get_eval_dataset(theme):
-    root = '/inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/exp_results/logs'
+def get_eval_dataset(theme, logs_root=None):
+    root = logs_root or '/inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/exp_results/logs'
 
     base_dir = os.path.join(root, theme)
     paths = []
@@ -105,6 +129,7 @@ def get_eval_dataset(theme):
 
 class DeepSeek:
     def __init__(self, api_key):
+        _require_openai()
         self.client = OpenAI(
             api_key='sk-785db80201014ade891d1db0525e48fd', 
             base_url="https://api.deepseek.com"
@@ -129,6 +154,7 @@ class DeepSeek:
 
 class Qwen3API:
     def __init__(self, api_key, base_url: str = None):
+        _require_openai()
         self.client = OpenAI(
             api_key=api_key, 
             base_url=base_url if base_url else "http://0.0.0.0:8002/v1" 
@@ -156,6 +182,7 @@ class Qwen3API:
 
 class GPTOssAPI:
     def __init__(self, api_key, base_url: str = None):
+        _require_openai()
         self.client = OpenAI(
             api_key=api_key, 
             base_url=base_url if base_url else "http://0.0.0.0:8002/v1" 
@@ -178,6 +205,7 @@ class GPTOssAPI:
 
 class Llama3API:
     def __init__(self, api_key, base_url: str = None):
+        _require_openai()
         self.client = OpenAI(
             api_key=api_key, 
             base_url=base_url if base_url else "http://0.0.0.0:8002/v1" 
@@ -745,6 +773,70 @@ def get_rigid_reasoning_flag(temp_eval_for_conv, model_class):
     rr_results = process_data_concurrent(model_class, '123', rr_inputs, max_workers=128)
     return rr_results
 
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run LifeSim evaluation pipeline from command line.")
+    parser.add_argument("--logs_root", required=True, help="Root directory containing simulation log folders.")
+    parser.add_argument("--themes", nargs='+', required=True, help="Theme folder names under logs_root.")
+    parser.add_argument("--output_root", required=True, help="Directory to save evaluation outputs.")
+    parser.add_argument("--evaluator", choices=["gpt_oss_120b", "qwen3_32b", "llama3_70b", "deepseek_chat"], default="gpt_oss_120b")
+    parser.add_argument("--api_key", default=os.getenv("OPENAI_API_KEY", "123"), help="API key passed to evaluator client.")
+    parser.add_argument("--base_url", default=None, help="Optional OpenAI-compatible base URL for evaluator model.")
+    parser.add_argument("--model_path", default=None, help="Optional model path/name override for evaluator.")
+    parser.add_argument("--metrics", nargs='+', default=["rr"], choices=["ir", "ic", "nat", "coh", "pa", "ea", "rr"], help="Metrics to run.")
+    parser.add_argument("--max_workers", type=int, default=32, help="Maximum worker threads for concurrent judging.")
+    return parser.parse_args()
+
+
+def build_model_factory(model_class, base_url=None, model_path=None):
+    class ModelWithRuntimeConfig(model_class):
+        def __init__(self, api_key):
+            kwargs = {}
+            if base_url is not None:
+                kwargs["base_url"] = base_url
+            super().__init__(api_key=api_key, **kwargs)
+            if model_path:
+                self.model = model_path
+
+    return ModelWithRuntimeConfig
+
+
+def run_evaluation(args):
+    os.makedirs(args.output_root, exist_ok=True)
+    base_model_class = model2class[args.evaluator]
+    model_factory = build_model_factory(base_model_class, base_url=args.base_url, model_path=args.model_path)
+
+    metric2runner = {
+        "ir": (get_ir_rating, "ir_results.jsonl"),
+        "ic": (get_ic_rating, "ic_results.jsonl"),
+        "nat": (get_nat_rating, "nat_results.jsonl"),
+        "coh": (get_coh_rating, "coh_results.jsonl"),
+        "pa": (get_pa_rating, "pa_results.jsonl"),
+        "ea": (get_env_alignment_rating, "ea_results.jsonl"),
+        "rr": (get_rigid_reasoning_flag, "rr_results.jsonl"),
+    }
+
+    global process_data_concurrent
+    _orig_process_data_concurrent = process_data_concurrent
+
+    def process_data_concurrent_with_args(model_class, api_key, data, max_workers=5):
+        return _orig_process_data_concurrent(model_class, api_key, data, max_workers=args.max_workers)
+
+    process_data_concurrent = process_data_concurrent_with_args
+
+    for theme in args.themes:
+        print(f"Running theme: {theme}")
+        _, _, _, eval_for_conv = get_eval_dataset(theme, logs_root=args.logs_root)
+        out_dir = os.path.join(args.output_root, theme)
+        os.makedirs(out_dir, exist_ok=True)
+
+        for metric in args.metrics:
+            runner, out_name = metric2runner[metric]
+            print(f"  -> {metric.upper()}")
+            results = runner(eval_for_conv, model_factory)
+            write_jsonl_data(results, os.path.join(out_dir, out_name))
+
 model2class = {
     'gpt_oss_120b': GPTOssAPI,
     'qwen3_32b': Qwen3API,
@@ -753,74 +845,5 @@ model2class = {
 }
 
 if __name__ == '__main__':
-    themes = [
-        'main_user_Qwen3-32B_assistant_gemma-3-12b-it_total',
-        'main_user_Qwen3-32B_assistant_gemma-3-27b-it_total',
-        'main_user_Qwen3-32B_assistant_gpt-oss-20b_total',
-        'main_user_Qwen3-32B_assistant_gpt-oss-120b_total',
-        'main_user_Qwen3-32B_assistant_Meta-Llama-3.1-8B-Instruct_total',
-        'main_user_Qwen3-32B_assistant_Meta-Llama-3.1-70B-Instruct_total',
-        'main_user_Qwen3-32B_assistant_Qwen3-8B_total',
-        # 'main_user_Qwen3-32B_assistant_Qwen3-8B-w_preference_memory_total',
-        'main_user_Qwen3-32B_assistant_Qwen3-14B_total',
-        # 'main_user_Qwen3-32B_assistant_Qwen3-14B-w_preference_memory_total',
-        'main_user_Qwen3-32B_assistant_Qwen3-32B_total',
-        # 'main_user_Qwen3-32B_assistant_Qwen3-32B-w_preference_memory_total',
-        'main_user_Qwen3-32B_assistant_deepseek-chat_total',
-        'main_user_Qwen3-32B_assistant_gpt-4o_total',
-        'main_user_Qwen3-32B_assistant_deepseek-reasoner_total',
-        'main_user_Qwen3-32B_assistant_claude-sonnet-4-5-20250929_total',
-        'main_user_Qwen3-32B_assistant_gpt-5_total',
-        
-        # 'main_user_Qwen3-32B_assistant_gemma-3-27b-it_long_session',
-        # 'main_user_Qwen3-32B_assistant_gpt-oss-20b_long_session',
-        # 'main_user_Qwen3-32B_assistant_Meta-Llama-3.1-8B-Instruct_long_session',
-        # 'main_user_Qwen3-32B_assistant_Qwen3-32B_long_session',
-        # 'main_user_Qwen3-32B_assistant_Qwen3-14B_long_session',
-        # 'main_user_Qwen3-32B_assistant_deepseek-chat_long_session'
-        # 'main_user_Qwen3-32B_assistant_claude-sonnet-4-5-20250929_long_session',
-        # 'main_user_Qwen3-32B_assistant_gpt-5_long_session',
-        # 'main_user_Qwen3-32B_assistant_claude-sonnet-4-5-20250929_long_session'
-    ]
-    
-    MODEL = 'gpt_oss_120b'
-
-    out_root = f'/inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/ai_assistant/evaluation/assistant_performance/{MODEL}'
-    os.makedirs(out_root, exist_ok=True)
-
-    model_class = model2class[MODEL]
-
-    for theme in themes:
-        out_dir = os.path.join(out_root, theme)
-        os.makedirs(out_dir, exist_ok=True)
-
-        print(theme)
-        eval_for_ir, eval_for_ic, eval_for_pp, eval_for_conv = get_eval_dataset(theme)
-        
-        # print('IR')
-        # ir_results = get_ir_rating(eval_for_conv, model_class)
-        # write_jsonl_data(ir_results, os.path.join(out_dir, 'ir1_results.jsonl'))
-
-        # print('IC')
-        # ic_results = get_ic_rating(eval_for_conv, model_class=model_class)
-        # write_jsonl_data(ic_results, os.path.join(out_dir, 'ic_results.jsonl'))
-
-        # print('NAT')
-        # nat_results = get_nat_rating(eval_for_conv, model_class=model_class)
-        # write_jsonl_data(nat_results, os.path.join(out_dir, 'nat_results.jsonl'))
-
-        # print('COH')
-        # coh_results = get_coh_rating(eval_for_conv, model_class=model_class)
-        # write_jsonl_data(coh_results, os.path.join(out_dir, 'coh_results.jsonl'))
-
-        # print('PA')
-        # pa_results = get_pa_rating(eval_for_conv, model_class=model_class)
-        # write_jsonl_data(pa_results, os.path.join(out_dir, 'pa_results.jsonl'))
-        
-        # print('EA')
-        # ea_results = get_env_alignment_rating(eval_for_conv, model_class=model_class)
-        # write_jsonl_data(ea_results, os.path.join(out_dir, 'ea_results.jsonl'))
-        
-        print('RR')
-        rr_results = get_rigid_reasoning_flag(eval_for_conv, model_class=model_class)
-        write_jsonl_data(rr_results, os.path.join(out_dir, 'rr_results.jsonl'))
+    args = parse_args()
+    run_evaluation(args)
