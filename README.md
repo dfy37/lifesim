@@ -71,17 +71,15 @@ In the released code, some default paths are hard-coded to an internal filesyste
 
 ## 5. Running the Main Pipeline
 
-(Events)
-
 Use `src/main_mp.py` as the main entrypoint:
 
 ```bash
 python src/main_mp.py \
   --user_model_path /path/to/user/model_or_name \
-  --user_model_url http://0.0.0.0:8000/v1 \
+  --user_model_url <USER_MODEL_URL> \
   --user_model_api_key <USER_API_KEY> \
   --assistant_model_path gpt-5 \
-  --assistant_model_url https://api.example.com/v1 \
+  --assistant_model_url <ASSISTANT_MODEL_URL> \
   --assistant_model_api_key <ASSISTANT_API_KEY> \
   --chromadb_root /path/to/chromadb_root \
   --logs_root /path/to/logs_root \
@@ -89,8 +87,6 @@ python src/main_mp.py \
   --n_threads 4 \
   --retriever_model_path /path/to/embedding/model
 ```
-
-(Evaluation)
 
 After simulation, you can evaluate assistant quality with the evaluator pipeline in `src/evaluation/eval.py` (and the corresponding analysis workflow in `src/evaluation/eval.ipynb`). The evaluation is organized as **LLM-as-a-judge** over multiple dimensions:
 
