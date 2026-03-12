@@ -75,6 +75,11 @@ The dim field should correspond exactly to the input dimension name and should n
 {conversation_context}
 """
 
+ASSISTANT_REVISE_CONV_PROMPT = """User utterance: {content}
+
+Please revise your reply based on the following suggestion: {advice}
+"""
+
 ASSISTANT_KEY_INFO_SUMMARY_PROMPT = '''You are a virtual AI assistant. Based on the predicted user profile and the current dialogue context, please summarize the key feedback from this dialogue.
 Generate structured memory summaries that can be used in future interactions. Each memory should include:
 - title: a short title that captures the core content of the memory, useful for retrieval

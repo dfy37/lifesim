@@ -70,6 +70,13 @@ USER_CONV_PROMPT = """{content}
 {emotion}
 """
 
+USER_REVISE_CONV_PROMPT = """{content}
+
+{perception}
+{emotion}
+{advice}
+"""
+
 USER_MEMORY_PROMPT = """Please review the following user-assistant conversation and determine whether the assistant's last reply should be stored as long-term memory.
 If it should, extract the most informative or transferable content and save it in a “query - response” format.
 ### User Profile

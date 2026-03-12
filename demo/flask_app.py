@@ -551,8 +551,8 @@ def parse_args():
     parser.add_argument(
         '--port', '-p',
         type=int,
-        default=5000,
-        help='Port to run the server on (default: 5000)'
+        default=5010,
+        help='Port to run the server on (default: 5010)'
     )
     parser.add_argument(
         '--debug',

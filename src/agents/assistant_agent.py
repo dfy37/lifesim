@@ -2,11 +2,12 @@ import json
 from typing import List, Dict, Optional
 
 from agents.prompts import (
-    ASSISTANT_CONV_PROMPT, 
+    ASSISTANT_CONV_PROMPT,
+    ASSISTANT_REVISE_CONV_PROMPT,
     ASSISTANT_INTENT_PROMPT,
-    ASSISTANT_CONV_SYSTEM_PROMPT, 
-    ASSISTANT_PROFILE_SUMMARY_PROMPT, 
-    ASSISTANT_KEY_INFO_SUMMARY_PROMPT
+    ASSISTANT_CONV_SYSTEM_PROMPT,
+    ASSISTANT_PROFILE_SUMMARY_PROMPT,
+    ASSISTANT_KEY_INFO_SUMMARY_PROMPT,
 )
 from agents.memory import SimpleMemory, KVMemory
 from utils.utils import parse_json_dict_response, get_logger, format_preferences, preferences2str
@@ -178,6 +179,23 @@ class AssistantAgent:
     def rollback_last_turn(self):
         assert self.messages[-1]['role'] == 'assistant', self.messages[-1]
         self.messages = self.messages[:-2]
+        self.conversations.kpop(2)
+
+    def revise_last_turn(self, advice: str, input: str):
+        self.rollback_last_turn()
+        self.conversations.add(f'User: {input}')
+
+        prompt = ASSISTANT_REVISE_CONV_PROMPT.format(content=input, advice=advice).strip()
+        self.messages.append({'role': 'user', 'content': prompt})
+
+        reply = self.model.chat(self.messages)
+        if not reply:
+            reply = ''
+
+        self.messages[-1]['content'] = ASSISTANT_CONV_PROMPT.format(content=input, intent='').strip()
+        self.messages.append({'role': 'assistant', 'content': reply})
+        self.conversations.add(f'Assistant: {reply}')
+        return reply
 
     def reinit(self):
         self.history_messages.append(self.messages.copy())

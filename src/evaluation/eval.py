@@ -1,285 +1,156 @@
 import os
 import argparse
 import json
-try:
-    from tqdm.auto import tqdm
-except ImportError:
-    class _DummyTqdm:
-        def __init__(self, iterable=None, **kwargs):
-            self.iterable = iterable
-        def __enter__(self):
-            return self
-        def __exit__(self, exc_type, exc, tb):
-            return False
-        def update(self, n=1):
-            return None
-        def set_postfix(self, *args, **kwargs):
-            return None
-
-    def tqdm(iterable=None, **kwargs):
-        return _DummyTqdm(iterable=iterable, **kwargs)
-
-try:
-    from openai import OpenAI
-except ImportError:
-    OpenAI = None
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import re
 import threading
 import time
-import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm.auto import tqdm
+
+from models.cloud import DeepSeek
+from models.vllm import VLLMModel, Qwen3API
 
 
+# ---------------------------------------------------------------------------
+# Data helpers
+# ---------------------------------------------------------------------------
 
-def _require_openai():
-    if OpenAI is None:
-        raise ImportError("openai package is required to run evaluation. Please install dependencies from src/requirements.txt.")
 def load_jsonl_data(path):
-    data = []
-    with open(path) as reader:
-        for row in reader:
-            data.append(json.loads(row))
-    return data
+    with open(path) as f:
+        return [json.loads(row) for row in f]
+
 
 def write_jsonl_data(data, path):
-    with open(path, "w") as writer:
+    with open(path, 'w') as f:
         for row in data:
-            writer.write(json.dumps(row) + "\n")
+            f.write(json.dumps(row) + '\n')
 
-def get_eval_dataset(theme, logs_root=None):
-    root = logs_root or '/inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/exp_results/logs'
 
-    base_dir = os.path.join(root, theme)
+def get_eval_dataset(theme, logs_root):
+    base_dir = os.path.join(logs_root, theme)
     paths = []
-
-    for root, dirs, files in os.walk(base_dir):
+    for dirpath, _dirs, files in os.walk(base_dir):
         for f in files:
-            if f.startswith("sim_log"):
-                paths.append(os.path.join(root, f))
+            if f.startswith('sim_log'):
+                paths.append(os.path.join(dirpath, f))
 
-    eval_for_ir = []
-    eval_for_ic = []
-    eval_for_pp = []
+    eval_for_ir   = []
+    eval_for_pp   = []
     eval_for_conv = []
 
     for p in paths:
-        data = json.load(open(p))
+        with open(p) as f:
+            data = json.load(f)
         name = os.path.basename(os.path.dirname(p))
 
         sequence_id = data['event_sequence_info']['sequence_id']
 
         for i, x in enumerate(data['dialogue_log']):
-            gold_intent = x['event']['intent']
+            gold_intent      = x['event']['intent']
             gold_sub_intents = x['event']['sub_intents']
             gold_preferences = x['user']['profile']['preferences_value']
 
-            conv = ''
+            conv         = ''
             pred_intents = ['']
-            
-            # flags = False
-            # for j, turn in enumerate(x['dialogue']):
-            #     if turn['role'] == 'assistant' and turn['content'] == "":
-            #         flags = True
-            #         break
-            
-            # if flags:
-            #     continue
-            
+
             for j, turn in enumerate(x['dialogue']):
                 if turn['role'] == 'user':
                     conv += f"[User] {turn['content']}\n"
                 else:
                     conv += f"[Assistant] {turn['content']}\n"
-                    
                     pre_intent = turn['pre_intent']
                     if pre_intent:
                         pred_intents.append(pre_intent)
                     eval_for_ir.append({
-                        'id': '_'.join([name, str(i), str(j)]),
-                        'sequence_id': sequence_id,
-                        'user_id': x['user']['profile']['user_id'],
-                        'gold_intent': gold_intent,
+                        'id':              '_'.join([name, str(i), str(j)]),
+                        'sequence_id':     sequence_id,
+                        'user_id':         x['user']['profile']['user_id'],
+                        'gold_intent':     gold_intent,
                         'gold_sub_intents': gold_sub_intents,
-                        'pre_intent': pre_intent if pre_intent else ''
+                        'pre_intent':      pre_intent if pre_intent else '',
                     })
-            
-            pred_preferences = x['pre_profile']
 
             eval_for_pp.append({
-                'id': '_'.join([name, str(i)]),
-                'sequence_id': sequence_id,
-                'user_id': x['user']['profile']['user_id'],
+                'id':               '_'.join([name, str(i)]),
+                'sequence_id':      sequence_id,
+                'user_id':          x['user']['profile']['user_id'],
                 'gold_preferences': gold_preferences,
-                'pred_preferences': pred_preferences
+                'pred_preferences': x['pre_profile'],
             })
 
             eval_for_conv.append({
-                'id': '_'.join([name, str(i)]),
-                'sequence_id': sequence_id,
-                'user_id': x['user']['profile']['user_id'],
-                'user_profile': x['user']['profile_str'],
+                'id':              '_'.join([name, str(i)]),
+                'sequence_id':     sequence_id,
+                'user_id':         x['user']['profile']['user_id'],
+                'user_profile':    x['user']['profile_str'],
                 'user_preferences': gold_preferences,
-                "dialogue_scene": x['event']['dialogue_scene'],
-                'intent': gold_intent,
-                'sub_intents': gold_sub_intents,
-                'conv': conv,
-                'pred_intents': pred_intents
+                'dialogue_scene':  x['event']['dialogue_scene'],
+                'intent':          gold_intent,
+                'sub_intents':     gold_sub_intents,
+                'conv':            conv,
+                'pred_intents':    pred_intents,
             })
-    
-    return eval_for_ir, eval_for_ic, eval_for_pp, eval_for_conv
 
-class DeepSeek:
-    def __init__(self, api_key):
-        _require_openai()
-        self.client = OpenAI(
-            api_key='sk-785db80201014ade891d1db0525e48fd', 
-            base_url="https://api.deepseek.com"
-        )
-        self.messages = []
-    
-    def chat(self, messages):
-        try:
-            response = self.client.chat.completions.create(
-                model="deepseek-chat",
-                messages=messages,
-                temperature=1.0
-            )
-            response_content = response.choices[0].message.content
-            messages1 = messages.copy()
-            messages1.append({"role": "assistant", "content": response_content})
-            self.messages.append(messages1)
-        except Exception as e:
-            response_content = ""
+    return eval_for_ir, eval_for_pp, eval_for_conv
 
-        return response_content
 
-class Qwen3API:
-    def __init__(self, api_key, base_url: str = None):
-        _require_openai()
-        self.client = OpenAI(
-            api_key=api_key, 
-            base_url=base_url if base_url else "http://0.0.0.0:8002/v1" 
-        )
-        self.messages = []
-        self.model = '/inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/MODELS/Qwen3-32B'
-    
-    def chat(self, messages):
-        try:
-            messages[-1]['content'] += ' /no_think'
+# ---------------------------------------------------------------------------
+# Model factory
+# ---------------------------------------------------------------------------
 
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=1.0
-            )
-            response_content = response.choices[0].message.content
+MODEL_CLASS_MAP = {
+    'gpt_oss_120b':  VLLMModel,
+    'qwen3_32b':     Qwen3API,
+    'llama3_70b':    VLLMModel,
+    'deepseek_chat': DeepSeek,
+}
 
-            response_content = re.sub(r"<think>.*?</think>", "", response_content, flags=re.DOTALL).strip()
-        except Exception as e:
-            print(e)
-            response_content = ""
 
-        return response_content
+def build_model_factory(base_class, api_key, base_url=None, model_path=None):
+    """Return a zero-argument callable that produces a ready-to-use model instance."""
+    def factory():
+        instance = base_class(model=model_path, api_key=api_key, base_url=base_url) \
+            if base_url or model_path else base_class(api_key=api_key)
+        return instance
+    return factory
 
-class GPTOssAPI:
-    def __init__(self, api_key, base_url: str = None):
-        _require_openai()
-        self.client = OpenAI(
-            api_key=api_key, 
-            base_url=base_url if base_url else "http://0.0.0.0:8002/v1" 
-        )
-        self.model = "/inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/MODELS/gpt-oss-120b"
-    
-    def chat(self, messages):
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=1.0
-            )
-            response_content = response.choices[0].message.content
-        except Exception as e:
-            print(e)
-            response_content = ""
 
-        return response_content
-
-class Llama3API:
-    def __init__(self, api_key, base_url: str = None):
-        _require_openai()
-        self.client = OpenAI(
-            api_key=api_key, 
-            base_url=base_url if base_url else "http://0.0.0.0:8002/v1" 
-        )
-        self.messages = []
-        self.model = '/inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/MODELS/Meta-Llama-3.1-70B-Instruct'
-    
-    def chat(self, messages):
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=1.0
-            )
-            response_content = response.choices[0].message.content
-        except Exception as e:
-            print(e)
-            response_content = ""
-
-        return response_content
+# ---------------------------------------------------------------------------
+# Concurrent inference
+# ---------------------------------------------------------------------------
 
 def process_single_item(model, item, index):
-    """Process a single item with the model"""
-    messages = [{
-        'role': 'user',
-        'content': item['input']
-    }]
-    
     max_retries = 5
     for attempt in range(max_retries):
         try:
-            response = model.chat(messages)
-            item['output'] = response
+            item['output'] = model.chat([{'role': 'user', 'content': item['input']}])
             return index, item, None
         except Exception as e:
-            print(e)
-            if attempt == max_retries - 1:  # Last attempt
-                print(f"Error occurred for item {index} after {max_retries} attempts: {e}")
-                item['output'] = ""
+            if attempt == max_retries - 1:
+                print(f"Error for item {index} after {max_retries} attempts: {e}")
+                item['output'] = ''
                 return index, item, str(e)
-            else:
-                # Wait before retry
-                time.sleep(2 ** attempt)  # Exponential backoff
-    
+            time.sleep(2 ** attempt)
     return index, item, None
 
-def process_data_concurrent(model_class, api_key, data, max_workers=5):
-    results = [None] * len(data)
+
+def process_data_concurrent(model_factory, data, max_workers=32):
+    results    = [None] * len(data)
     error_count = 0
-    lock = threading.Lock()
-    
+    lock        = threading.Lock()
     thread_local = threading.local()
-    
+
     def get_model():
         if not hasattr(thread_local, 'model'):
-            thread_local.model = model_class(api_key=api_key)
+            thread_local.model = model_factory()
         return thread_local.model
-    
-    def process_item_with_thread_local(item_data):
-        index, item = item_data
-        model = get_model()
-        return process_single_item(model, item, index)
-    
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        print("Fast batch submission...")
 
-        indexed_data = [(i, item.copy()) for i, item in enumerate(data)]
-        
-        futures = [executor.submit(process_item_with_thread_local, item_data) 
-                  for item_data in indexed_data]
-        
-        print(f"Processing {len(futures)} tasks...")
-        
-        with tqdm(total=len(futures), desc="Processing") as pbar:
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        indexed   = [(i, item.copy()) for i, item in enumerate(data)]
+        futures   = [executor.submit(process_single_item, get_model(), item, i)
+                     for i, item in indexed]
+
+        with tqdm(total=len(futures), desc='Processing') as pbar:
             for future in as_completed(futures):
                 index, result, error = future.result()
                 results[index] = result
@@ -288,14 +159,18 @@ def process_data_concurrent(model_class, api_key, data, max_workers=5):
                         error_count += 1
                 pbar.set_postfix({'errors': error_count})
                 pbar.update(1)
-    
+
     return results
 
-# Intent Recognition
-IR_PROMPT = '''You are an evaluator assessing whether an AI assistant’s predicted intent correctly matches the **real user intent** in a given dialogue.
+
+# ---------------------------------------------------------------------------
+# Evaluation prompts & runners
+# ---------------------------------------------------------------------------
+
+IR_PROMPT = '''You are an evaluator assessing whether an AI assistant's predicted intent correctly matches the **real user intent** in a given dialogue.
 You will be provided with:
-* Intent checklist — a structured list representing the verified components of the user’s real intent.
-* Predicted intents — the assistant’s inferred or generated intent statements during the whole conversation.
+* Intent checklist — a structured list representing the verified components of the user's real intent.
+* Predicted intents — the assistant's inferred or generated intent statements during the whole conversation.
 * Conversation — showing the interaction between the user and the assistant.
 
 ### Requirements
@@ -325,11 +200,11 @@ Before your response, provide: **Dimension-by-dimension assessment (bullet list)
 The user wants to regain productivity by finding concrete methods to stay focused when working from home.
 [Output]
 Concise evaluation:
-The predicted intent captures the main functional goal (improving focus) and emphasizes productivity, which aligns well with the user’s practical needs. However, it overlooks the emotional reassurance component — acknowledging that distraction is normal — which was part of the true intent.
+The predicted intent captures the main functional goal (improving focus) and emphasizes productivity, which aligns well with the user's practical needs. However, it overlooks the emotional reassurance component — acknowledging that distraction is normal — which was part of the true intent.
 Dimension-by-dimension assessment:
 Wants to find strategies to improve focus while working remotely → ✅ Correctly captured. → 1
 Seeks emotional reassurance that losing focus is normal → ⚠️ Missing — no emotional aspect included. → 0
-Prefers realistic, easy-to-apply methods over abstract motivation → ✅ The phrase “concrete methods” fits well. → 1
+Prefers realistic, easy-to-apply methods over abstract motivation → ✅ The phrase "concrete methods" fits well. → 1
 ```json
 {{
   "Wants to find strategies to improve focus while working remotely": 1,
@@ -348,40 +223,30 @@ Prefers realistic, easy-to-apply methods over abstract motivation → ✅ The ph
 [Output]
 '''
 
-def get_ir_rating(temp_eval_for_conv, model_class):
-    ir_inputs = []
-    for x in temp_eval_for_conv:
-        checklist_items = x['sub_intents']
-        checklist_str = '\n'.join([f"- {item['description']}" for item in checklist_items])
 
-        pred_intents = x['pred_intents']
-        pred_intents = '\n'.join(pred_intents)
-        
-        _input = IR_PROMPT.format(
-            checklist = checklist_str,
+def get_ir_rating(eval_for_conv, model_factory, max_workers=32):
+    inputs = []
+    for x in eval_for_conv:
+        checklist_str  = '\n'.join(f"- {item['description']}" for item in x['sub_intents'])
+        pred_intents   = '\n'.join(x['pred_intents'])
+        x['input'] = IR_PROMPT.format(
+            checklist=checklist_str,
             conversation=x['conv'],
-            predicted_intent = pred_intents
+            predicted_intent=pred_intents,
         )
+        inputs.append(x)
+    return process_data_concurrent(model_factory, inputs, max_workers=max_workers)
 
-        x.update({
-            'input': _input
-        })
-        ir_inputs.append(x)
 
-    ir_results = process_data_concurrent(model_class, '123', ir_inputs, max_workers=32)
-
-    return ir_results
-
-# Intent Completion
-IC_PROMPT = '''You are an evaluator assessing whether an AI assistant has effectively fulfilled the user’s intent in a given dialogue.
+IC_PROMPT = '''You are an evaluator assessing whether an AI assistant has effectively fulfilled the user's intent in a given dialogue.
 You will be provided with:
-* User profile — describing the user’s characteristics and communication tendencies.
+* User profile — describing the user's characteristics and communication tendencies.
 * Dialogue scene — describing the environmental and contextual background.
 * User intent — describing what the user wanted to achieve through the conversation.
 * Conversation — showing the actual interaction between the user and the assistant.
 
 ### Requirements
-Your task is to evaluate how accurately the assistant’s response meets the user’s intent, based on the key dimensions listed in the checklist.
+Your task is to evaluate how accurately the assistant's response meets the user's intent, based on the key dimensions listed in the checklist.
 Each dimension in the checklist should be scored as follows:
 * 1 = The assistant correctly fulfills this intent dimension
 * 0 = The assistant fails to fulfill or contradicts this intent dimension
@@ -408,38 +273,30 @@ Before your response, provide: **Dimension-by-dimension assessment (bullet list)
 {conversation}
 '''
 
-def get_ic_rating(temp_eval_for_conv, model_class):
-    ic_inputs = []
-    for x in temp_eval_for_conv:
-        checklist_items = x['sub_intents']
-        checklist_str = '\n'.join([f"- {item['description']}" for item in checklist_items])
 
-        _input = IC_PROMPT.format(
+def get_ic_rating(eval_for_conv, model_factory, max_workers=32):
+    inputs = []
+    for x in eval_for_conv:
+        checklist_str = '\n'.join(f"- {item['description']}" for item in x['sub_intents'])
+        x['input'] = IC_PROMPT.format(
             user_profile=x['user_profile'],
             dialogue_scene=x['dialogue_scene'],
             conversation=x['conv'],
-            checklist=checklist_str
+            checklist=checklist_str,
         )
+        inputs.append(x)
+    return process_data_concurrent(model_factory, inputs, max_workers=max_workers)
 
-        x.update({
-            'input': _input
-        })
-        ic_inputs.append(x)
 
-    ic_results = process_data_concurrent(model_class, '123', ic_inputs, max_workers=32)
-
-    return ic_results
-
-# Naturalness
-NAT_PROMPT = '''You are an evaluator assessing the fluency and naturalness of an AI assistant’s conversation with a user.
+NAT_PROMPT = '''You are an evaluator assessing the fluency and naturalness of an AI assistant's conversation with a user.
 You will be provided with:
-* User profile — describing the user’s characteristics and communication tendencies.
+* User profile — describing the user's characteristics and communication tendencies.
 * Dialogue scene — describing the situational context of the conversation.
 * User intent — describing what the user wanted to achieve through the interaction.
 * Conversation — showing the actual interaction between the user and the assistant.
 
 ### Requirements
-Your task is to determine whether the AI assistant’s responses are fluent, coherent, and natural throughout the conversation.
+Your task is to determine whether the AI assistant's responses are fluent, coherent, and natural throughout the conversation.
 Analyze it from multiple relevant dimensions:
 * Language is conversational, avoiding overly long, formal, or bookish expressions.
 * Vocabulary is natural, everyday, and varied, avoiding repetition or overly technical terms.
@@ -454,14 +311,14 @@ Your response should be structured in JSON format, enclosed in ```json and ```:
 }}
 ```
 Where:
-    * 1 = Very unnatural or disfluent  
-    * 2 = Mostly unnatural, noticeable problems in phrasing  
-    * 3 = Moderately fluent but with some issues  
-    * 4 = Mostly natural, minor disfluency  
+    * 1 = Very unnatural or disfluent
+    * 2 = Mostly unnatural, noticeable problems in phrasing
+    * 3 = Moderately fluent but with some issues
+    * 4 = Mostly natural, minor disfluency
     * 5 = Fully fluent and natural
 
 Before your JSON output, provide:
-1. A concise evaluation (2–3 sentences) summarizing the overall fluency of the assistant’s replies.
+1. A concise evaluation (2–3 sentences) summarizing the overall fluency of the assistant's replies.
 2. A dimension-by-dimension assessment (as bullet points).
 
 ### Input
@@ -475,35 +332,32 @@ Before your JSON output, provide:
 {conversation}
 '''
 
-def get_nat_rating(temp_eval_for_conv, model_class):
-    nat_inputs = []
-    for x in temp_eval_for_conv:
-        _input = NAT_PROMPT.format(
-            user_profile=x['user_profile'],
-            dialogue_scene=x['dialogue_scene'],
-            user_intent=x['intent'],
-            conversation=x['conv']
-        )
 
-        nat_inputs.append({
-            'id': x['id'],
-            'conv': x,
-            'input': _input
+def get_nat_rating(eval_for_conv, model_factory, max_workers=32):
+    inputs = []
+    for x in eval_for_conv:
+        inputs.append({
+            'id':    x['id'],
+            'conv':  x,
+            'input': NAT_PROMPT.format(
+                user_profile=x['user_profile'],
+                dialogue_scene=x['dialogue_scene'],
+                user_intent=x['intent'],
+                conversation=x['conv'],
+            ),
         })
+    return process_data_concurrent(model_factory, inputs, max_workers=max_workers)
 
-    nat_results = process_data_concurrent(model_class, '123', nat_inputs, max_workers=32)
-    return nat_results
 
-# Coherence
-COH_PROMPT = '''You are an evaluator assessing the coherence and logical consistency of an AI assistant’s conversation with a user.
+COH_PROMPT = '''You are an evaluator assessing the coherence and logical consistency of an AI assistant's conversation with a user.
 You will be provided with:
-* User profile — describing the user’s characteristics and communication tendencies.
+* User profile — describing the user's characteristics and communication tendencies.
 * Dialogue scene — describing the situational context of the conversation.
 * User intent — describing what the user wanted to achieve through the interaction.
 * Conversation — showing the actual interaction between the user and the assistant.
 
 ### Requirements
-Your task is to determine whether the AI assistant’s responses are coherent, logically consistent, and contextually aligned throughout the dialogue.
+Your task is to determine whether the AI assistant's responses are coherent, logically consistent, and contextually aligned throughout the dialogue.
 Analyze it from multiple relevant dimensions:
 * Responses should focus on the user's main concerns, avoiding unnecessary digressions or repetitive generic advice.
 * Each response should be logically consistent, avoiding contradictions or redundant statements that add no new value.
@@ -518,14 +372,14 @@ Your response should be structured in JSON format, enclosed in `json and `:
 }}
 ```
 Where:
-    * 1 = Completely incoherent or contradictory  
-    * 2 = Mostly incoherent, several logical gaps or inconsistencies  
-    * 3 = Partially coherent with some logical gaps or inconsistencies  
-    * 4 = Mostly coherent, minor logical gaps or inconsistencies  
+    * 1 = Completely incoherent or contradictory
+    * 2 = Mostly incoherent, several logical gaps or inconsistencies
+    * 3 = Partially coherent with some logical gaps or inconsistencies
+    * 4 = Mostly coherent, minor logical gaps or inconsistencies
     * 5 = Fully coherent and logically consistent
 
 Before your JSON output, provide:
-1. A concise evaluation (2–3 sentences) summarizing the overall coherence of the assistant’s replies.
+1. A concise evaluation (2–3 sentences) summarizing the overall coherence of the assistant's replies.
 2. A dimension-by-dimension assessment (as bullet points).
 
 ### Input
@@ -539,40 +393,36 @@ Before your JSON output, provide:
 {conversation}
 '''
 
-def get_coh_rating(temp_eval_for_conv, model_class):
-    coh_inputs = []
-    for x in temp_eval_for_conv:
-        _input = COH_PROMPT.format(
-            user_profile=x['user_profile'],
-            dialogue_scene=x['dialogue_scene'],
-            user_intent=x['intent'],
-            conversation=x['conv']
-        )
 
-        coh_inputs.append({
-            'id': x['id'],
-            'conv': x,
-            'input': _input
+def get_coh_rating(eval_for_conv, model_factory, max_workers=32):
+    inputs = []
+    for x in eval_for_conv:
+        inputs.append({
+            'id':    x['id'],
+            'conv':  x,
+            'input': COH_PROMPT.format(
+                user_profile=x['user_profile'],
+                dialogue_scene=x['dialogue_scene'],
+                user_intent=x['intent'],
+                conversation=x['conv'],
+            ),
         })
+    return process_data_concurrent(model_factory, inputs, max_workers=max_workers)
 
-    coh_results = process_data_concurrent(model_class, '123', coh_inputs, max_workers=32)
 
-    return coh_results
-
-# Preference Alignment
-PA_PROMPT = '''You are an evaluator assessing how well an AI assistant’s replies align with the user’s preferences.
+PA_PROMPT = '''You are an evaluator assessing how well an AI assistant's replies align with the user's preferences.
 You will be provided with:
-* User preferences — a list of preference dimensions (e.g., “Need for autonomy,” “Preference for emotional support”) and their expected values or tendencies.
+* User preferences — a list of preference dimensions (e.g., "Need for autonomy," "Preference for emotional support") and their expected values or tendencies.
 * Conversation — showing the interaction between the user and the assistant.
 
 ### Requirements
 Your task is to evaluate the alignment for each preference dimension individually.
-For each dimension listed in the user profile, determine whether the assistant’s replies conform to that specific preference.
+For each dimension listed in the user profile, determine whether the assistant's replies conform to that specific preference.
 
 #### Evaluation Criteria
 For each preference dimension:
-* 1 = The assistant’s reply clearly aligns with this preference dimension.
-* 0 = The assistant’s reply contradicts or fails to reflect this preference dimension.
+* 1 = The assistant's reply clearly aligns with this preference dimension.
+* 0 = The assistant's reply contradicts or fails to reflect this preference dimension.
 Then, provide an overall summary at the end.
 
 ### Output Format
@@ -592,12 +442,12 @@ Your response should contain:
 - Preference for detailed explanations: low
 - Preference for direct communication: high
 [Conversation]
-User: I just feel like things keep piling up, and I can’t catch my breath.
+User: I just feel like things keep piling up, and I can't catch my breath.
 Assistant: That sounds really stressful. Maybe we can talk about some ways to slow down and make space for yourself.
 [Output]
 * Preference for emotional warmth → The assistant shows care and empathy. → **1**
-* Preference for detailed explanations → The reply is brief and not overly detailed, matching the user’s low-detail preference. → **1**
-* Preference for direct communication → The assistant’s phrasing is soft and reflective, not very direct. → **0**
+* Preference for detailed explanations → The reply is brief and not overly detailed, matching the user's low-detail preference. → **1**
+* Preference for direct communication → The assistant's phrasing is soft and reflective, not very direct. → **0**
 * Preference for human safety → The assistant's response does not reflect a concern for the user's safety. → **0**
 ```json
 {{
@@ -616,32 +466,29 @@ Assistant: That sounds really stressful. Maybe we can talk about some ways to sl
 [Output]
 '''
 
-def get_pa_rating(temp_eval_for_conv, model_class):
-    pa_inputs = []
-    for x in temp_eval_for_conv:
-        user_preferences = '\n'.join([f"- {k}: {v}" for k, v in x['user_preferences'].items()])
-        _input = PA_PROMPT.format(
-            user_preferences=user_preferences,
-            conversation=x['conv']
-        )
 
-        pa_inputs.append({
-            'id': x['id'],
-            'conv': x,
-            'input': _input
+def get_pa_rating(eval_for_conv, model_factory, max_workers=32):
+    inputs = []
+    for x in eval_for_conv:
+        user_preferences = '\n'.join(f"- {k}: {v}" for k, v in x['user_preferences'].items())
+        inputs.append({
+            'id':    x['id'],
+            'conv':  x,
+            'input': PA_PROMPT.format(
+                user_preferences=user_preferences,
+                conversation=x['conv'],
+            ),
         })
+    return process_data_concurrent(model_factory, inputs, max_workers=max_workers)
 
-    pa_results = process_data_concurrent(model_class, '123', pa_inputs, max_workers=32)
 
-    return pa_results
-
-EA_PROMPT = '''You are an evaluator assessing whether an AI assistant’s replies are aligned with the dialogue environment.
+EA_PROMPT = '''You are an evaluator assessing whether an AI assistant's replies are aligned with the dialogue environment.
 You will be provided with:
 * Dialogue scene — describing situational context and constraints.
 * Conversation — showing the actual interaction between the user and the assistant.
 
 ### Requirements
-Your task is to determine whether the AI assistant’s responses remain contextually consistent with the dialogue environment and are strategically reasonable.
+Your task is to determine whether the AI assistant's responses remain contextually consistent with the dialogue environment and are strategically reasonable.
 Analyze from multiple relevant dimensions:
 * Factual consistency with environment: claims about time, place, weather, availability, opening hours, travel feasibility, etc. should not contradict the provided environment.
 * Temporal appropriateness: suggestions match the time of day / day of week / season (e.g., late-night options, commute time, daylight, urgency).
@@ -673,36 +520,24 @@ Your response MUST follow this structure:
 {conversation}
 '''
 
-def get_env_alignment_rating(temp_eval_for_conv, model_class):
-    """
-    temp_eval_for_conv: list[dict], each dict should at least contain:
-    - id
-    - user_profile
-    - dialogue_scene
-    - dialogue_environment # NEW: 环境字段（时间/地点/天气/限制等）
-    - intent
-    - conv
-    model_class: passed to process_data_concurrent
-    """
-    ea_inputs = []
-    for x in temp_eval_for_conv:
-        _input = EA_PROMPT.format(
-            user_profile=x['user_profile'],
-            dialogue_scene=x['dialogue_scene'],
-            user_intent=x['intent'],
-            conversation=x['conv']
-        )
-        ea_inputs.append({
-        'id': x['id'],
-        'conv': x,
-        'input': _input
+
+def get_env_alignment_rating(eval_for_conv, model_factory, max_workers=32):
+    inputs = []
+    for x in eval_for_conv:
+        inputs.append({
+            'id':    x['id'],
+            'conv':  x,
+            'input': EA_PROMPT.format(
+                dialogue_scene=x['dialogue_scene'],
+                conversation=x['conv'],
+            ),
         })
-    ea_results = process_data_concurrent(model_class, '123', ea_inputs, max_workers=32)
-    return ea_results
+    return process_data_concurrent(model_factory, inputs, max_workers=max_workers)
+
 
 RR_PROMPT = '''You are an evaluator detecting "Rigid Reasoning" in an AI assistant across an extended dialogue.
 You will be provided with:
-* User profile — describing the user’s characteristics and communication tendencies.
+* User profile — describing the user's characteristics and communication tendencies.
 * Dialogue scene — describing the situational context of the conversation.
 * User intent — describing what the user wanted to achieve through the interaction.
 * Conversation — showing the actual interaction between the user and the assistant.
@@ -747,103 +582,71 @@ Input
 {conversation}
 '''
 
-def get_rigid_reasoning_flag(temp_eval_for_conv, model_class):
-    """
-    temp_eval_for_conv: list[dict], each dict should at least contain:
-    - id
-    - user_profile
-    - dialogue_scene
-    - intent
-    - conv
-    model_class: passed to process_data_concurrent
-    """
-    rr_inputs = []
-    for x in temp_eval_for_conv:
-        _input = RR_PROMPT.format(
-            user_profile=x['user_profile'],
-            dialogue_scene=x['dialogue_scene'],
-            user_intent=x['intent'],
-            conversation=x['conv']
-        )
-        rr_inputs.append({
-            'id': x['id'],
-            'conv': x,
-            'input': _input
-        })
-    rr_results = process_data_concurrent(model_class, '123', rr_inputs, max_workers=128)
-    return rr_results
 
+def get_rigid_reasoning_flag(eval_for_conv, model_factory, max_workers=32):
+    inputs = []
+    for x in eval_for_conv:
+        inputs.append({
+            'id':    x['id'],
+            'conv':  x,
+            'input': RR_PROMPT.format(
+                user_profile=x['user_profile'],
+                dialogue_scene=x['dialogue_scene'],
+                user_intent=x['intent'],
+                conversation=x['conv'],
+            ),
+        })
+    return process_data_concurrent(model_factory, inputs, max_workers=max_workers)
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+METRIC_RUNNERS = {
+    'ir':  (get_ir_rating,             'ir_results.jsonl'),
+    'ic':  (get_ic_rating,             'ic_results.jsonl'),
+    'nat': (get_nat_rating,            'nat_results.jsonl'),
+    'coh': (get_coh_rating,            'coh_results.jsonl'),
+    'pa':  (get_pa_rating,             'pa_results.jsonl'),
+    'ea':  (get_env_alignment_rating,  'ea_results.jsonl'),
+    'rr':  (get_rigid_reasoning_flag,  'rr_results.jsonl'),
+}
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run LifeSim evaluation pipeline from command line.")
-    parser.add_argument("--logs_root", required=True, help="Root directory containing simulation log folders.")
-    parser.add_argument("--themes", nargs='+', required=True, help="Theme folder names under logs_root.")
-    parser.add_argument("--output_root", required=True, help="Directory to save evaluation outputs.")
-    parser.add_argument("--evaluator", choices=["gpt_oss_120b", "qwen3_32b", "llama3_70b", "deepseek_chat"], default="gpt_oss_120b")
-    parser.add_argument("--api_key", default=os.getenv("OPENAI_API_KEY", "123"), help="API key passed to evaluator client.")
-    parser.add_argument("--base_url", default=None, help="Optional OpenAI-compatible base URL for evaluator model.")
-    parser.add_argument("--model_path", default=None, help="Optional model path/name override for evaluator.")
-    parser.add_argument("--metrics", nargs='+', default=["rr"], choices=["ir", "ic", "nat", "coh", "pa", "ea", "rr"], help="Metrics to run.")
-    parser.add_argument("--max_workers", type=int, default=32, help="Maximum worker threads for concurrent judging.")
+    parser = argparse.ArgumentParser(description='Run LifeSim evaluation pipeline.')
+    parser.add_argument('--logs_root',   required=True, help='Root directory containing simulation log folders.')
+    parser.add_argument('--themes',      nargs='+', required=True, help='Theme folder names under logs_root.')
+    parser.add_argument('--output_root', required=True, help='Directory to save evaluation outputs.')
+    parser.add_argument('--evaluator',   choices=list(MODEL_CLASS_MAP), default='gpt_oss_120b')
+    parser.add_argument('--api_key',     default=os.getenv('OPENAI_API_KEY', '123'), help='API key for evaluator.')
+    parser.add_argument('--base_url',    default=None, help='OpenAI-compatible base URL for evaluator.')
+    parser.add_argument('--model_path',  required=True, help='Model path/name for evaluator.')
+    parser.add_argument('--metrics',     nargs='+', default=['rr'],
+                        choices=list(METRIC_RUNNERS), help='Metrics to run.')
+    parser.add_argument('--max_workers', type=int, default=32, help='Worker threads for concurrent judging.')
     return parser.parse_args()
-
-
-def build_model_factory(model_class, base_url=None, model_path=None):
-    class ModelWithRuntimeConfig(model_class):
-        def __init__(self, api_key):
-            kwargs = {}
-            if base_url is not None:
-                kwargs["base_url"] = base_url
-            super().__init__(api_key=api_key, **kwargs)
-            if model_path:
-                self.model = model_path
-
-    return ModelWithRuntimeConfig
 
 
 def run_evaluation(args):
     os.makedirs(args.output_root, exist_ok=True)
-    base_model_class = model2class[args.evaluator]
-    model_factory = build_model_factory(base_model_class, base_url=args.base_url, model_path=args.model_path)
-
-    metric2runner = {
-        "ir": (get_ir_rating, "ir_results.jsonl"),
-        "ic": (get_ic_rating, "ic_results.jsonl"),
-        "nat": (get_nat_rating, "nat_results.jsonl"),
-        "coh": (get_coh_rating, "coh_results.jsonl"),
-        "pa": (get_pa_rating, "pa_results.jsonl"),
-        "ea": (get_env_alignment_rating, "ea_results.jsonl"),
-        "rr": (get_rigid_reasoning_flag, "rr_results.jsonl"),
-    }
-
-    global process_data_concurrent
-    _orig_process_data_concurrent = process_data_concurrent
-
-    def process_data_concurrent_with_args(model_class, api_key, data, max_workers=5):
-        return _orig_process_data_concurrent(model_class, api_key, data, max_workers=args.max_workers)
-
-    process_data_concurrent = process_data_concurrent_with_args
+    base_class    = MODEL_CLASS_MAP[args.evaluator]
+    model_factory = build_model_factory(base_class, api_key=args.api_key,
+                                        base_url=args.base_url, model_path=args.model_path)
 
     for theme in args.themes:
-        print(f"Running theme: {theme}")
-        _, _, _, eval_for_conv = get_eval_dataset(theme, logs_root=args.logs_root)
+        print(f'Running theme: {theme}')
+        _, _, eval_for_conv = get_eval_dataset(theme, logs_root=args.logs_root)
         out_dir = os.path.join(args.output_root, theme)
         os.makedirs(out_dir, exist_ok=True)
 
         for metric in args.metrics:
-            runner, out_name = metric2runner[metric]
-            print(f"  -> {metric.upper()}")
-            results = runner(eval_for_conv, model_factory)
+            runner, out_name = METRIC_RUNNERS[metric]
+            print(f'  -> {metric.upper()}')
+            results = runner(eval_for_conv, model_factory, max_workers=args.max_workers)
             write_jsonl_data(results, os.path.join(out_dir, out_name))
 
-model2class = {
-    'gpt_oss_120b': GPTOssAPI,
-    'qwen3_32b': Qwen3API,
-    'llama3_70b': Llama3API,
-    'deepseek_chat': DeepSeek
-}
 
 if __name__ == '__main__':
-    args = parse_args()
-    run_evaluation(args)
+    run_evaluation(parse_args())

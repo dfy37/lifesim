@@ -9,9 +9,10 @@ from typing import List, Optional
 from agents.prompts import (
     USER_CONV_SYSTEM_PROMPT,
     USER_CONV_PROMPT,
+    USER_REVISE_CONV_PROMPT,
     USER_MEMORY_PROMPT,
     USER_EMOTION_PROMPT,
-    USER_ACTION_PROMPT
+    USER_ACTION_PROMPT,
 )
 from agents.memory import KVMemory, SimpleMemory
 from utils.utils import parse_json_dict_response, find_closest_str_match, get_logger
@@ -47,6 +48,7 @@ class UserAgent:
         self.history_messages = []
         self.messages = []
         self.action_space = UserActionEnum
+        self.states = []
 
         # Memory perception coefficient
         self.alpha = alpha
@@ -204,19 +206,21 @@ class UserAgent:
             self.logger.error(f"Action selection error: {e}")
             return self.action_space.CONTINUE
 
-    def respond(self, prompt: str, use_emotion_chain: bool = False, use_dynamic_memory: bool = False) -> dict:      
-        memory_perception = '',
-        S = -1 
+    def respond(self, prompt: str, use_emotion_chain: bool = False, use_dynamic_memory: bool = False) -> dict:
+        memory_perception = ''
+        S = -1
         if use_dynamic_memory and len(prompt) > 0:
             memory_perception, S = self._process_dynamic_memory(prompt)
-        
+
         self.conversations.add(f"Assistant: {prompt}")
 
         emotion = ''
-        if use_emotion_chain:
+        if use_emotion_chain and len(prompt) > 0 and len(self.messages) > 1:
             emotion = self._analyze_emotion(memory_perception)
+        else:
+            emotion = 'neutral'
 
-        if len(prompt) > 0 and len(self.messages) > 2:
+        if len(prompt) > 0 and len(self.messages) > 4:
             action = self._decide_action(memory_perception, emotion)
         else:
             action = self.action_space.CONTINUE
@@ -255,25 +259,64 @@ class UserAgent:
             'content': reply_content
         })
         self.conversations.add(f"User: {reply_content}")
+        self.states.append({
+            'action': action,
+            'emotion': emotion,
+            'memory_perception': memory_perception,
+            'memory_similarity': S,
+        })
 
-        result =  {
+        return {
             'action': action,
             'response': reply_content,
             'memory_similarity': S,
-            'emotion': emotion
+            'emotion': emotion,
         }
 
-        return result
-    
     def rollback_last_turn(self):
         assert self.messages[-1]['role'] == 'assistant', self.messages[-1]
         self.messages = self.messages[:-2]
         self.conversations.kpop(2)
 
+    def revise_last_turn(self, advice: str, prompt: str):
+        self.rollback_last_turn()
+        self.conversations.add(f"Assistant: {prompt}")
+
+        emotion = self.states[-1]['emotion'] if self.states else 'neutral'
+        memory_perception = self.states[-1]['memory_perception'] if self.states else ''
+
+        self.logger.info("[UserAgent] Start revising...")
+        revised_prompt = USER_REVISE_CONV_PROMPT.format(
+            content=f"Assistant utterance: {prompt}" if prompt else "",
+            perception=f"Current user memory perception: {memory_perception}" if memory_perception else "",
+            emotion=f"Current user emotion: {emotion}" if emotion else "",
+            advice=f"Please revise your reply based on the following suggestion: {advice}",
+        ).strip()
+
+        self.messages.append({'role': 'user', 'content': revised_prompt})
+        with self.synchronized():
+            reply_content = self.model.chat(self.messages)
+
+        self.messages[-1]['content'] = USER_CONV_PROMPT.format(
+            content=f"Assistant utterance: {prompt}" if prompt else "",
+            perception=f"Current user memory perception: {memory_perception}" if memory_perception else "",
+            emotion=f"Current user emotion: {emotion}" if emotion else "",
+        )
+        self.messages.append({'role': 'assistant', 'content': reply_content})
+        self.conversations.add(f"User: {reply_content}")
+
+        return {
+            'action': self.states[-1]['action'] if self.states else self.action_space.CONTINUE,
+            'response': reply_content,
+            'memory_similarity': self.states[-1]['memory_similarity'] if self.states else -1,
+            'emotion': emotion,
+        }
+
     def reinit(self):
         self.history_messages.append(self.messages.copy())
         self.messages = []
         self.conversations = SimpleMemory()
+        self.states = []
 
     def get_profile(self) -> dict:
         return self.static_memory.get()
