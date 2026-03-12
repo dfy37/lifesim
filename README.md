@@ -44,77 +44,12 @@ The pipeline expects the following directory layout under `data/`:
 ```
 data/
 ├── single_session/
-│   ├── events.jsonl          # Event sequences (single-session setting)
+│   ├── events.jsonl          # Event sequences 
 │   └── users.jsonl           # User profiles
 ├── long_horizon/
-│   ├── events.jsonl          # Event sequences (long-horizon setting)
+│   ├── events.jsonl          # Event sequences 
 │   └── users.jsonl           # User profiles
 └── language_templates.json   # Preference dimension templates
-```
-
-**`events.jsonl`** — one JSON object per line, each representing one user's event sequence:
-
-```jsonc
-{
-  "id": "NYC_entertainment_001",       // unique sequence ID
-  "user_id": "user_001",
-  "theme": "entertainment",
-  "longterm_goal": "...",
-  "events": [
-    {
-      "time": "2024-03-01 14:30:00, Friday",
-      "location": "AMC Theater, Manhattan",
-      "event": "User wants to watch a movie this afternoon.",
-      "life_event": "User wants to watch a movie this afternoon.",
-      "intent": "Find a suitable movie and buy tickets.",
-      "sub_intents": [
-        {"type": "explicit", "description": "Check showtimes near current location"},
-        {"type": "implicit", "description": "Prefer seats with good legroom"}
-      ],
-      "weather": {"description": "Sunny, 22°C"}
-    }
-    // ... more events
-  ]
-}
-```
-
-**`users.jsonl`** — one JSON object per line, each representing a user profile:
-
-```jsonc
-{
-  "user_id": "user_001",
-  "gender": "Female",
-  "age": 28,
-  "marital": "Single",
-  "area": "New York",
-  "income": "Middle",
-  "employment": "Software Engineer",
-  "personality": ["Introverted", "Analytical"],
-  "preferences": [
-    "Prefers IMAX or Dolby screenings for blockbusters",
-    "Dislikes crowded venues on weekends"
-  ],
-  "preferences_value": {
-    "content_preference": "high",
-    "service_sensitivity": "middle"
-  }
-}
-```
-
-**`language_templates.json`** — defines the preference dimensions used by the assistant's summarization module. Each entry specifies a dimension name and the semantic meaning of `high`, `middle`, and `low` values:
-
-```jsonc
-[
-  {
-    "dimension": "content_preference",
-    "template": {
-      "high":   "User has strong and specific content preferences.",
-      "middle": "User has moderate content preferences.",
-      "low":    "User is flexible about content choices."
-    }
-  }
-  // ... more dimensions
-]
 ```
 
 ---
@@ -180,40 +115,6 @@ python src/main_mp.py \
   --logs_root            ./logs
 ```
 
-**Full argument reference:**
-
-| Argument | Default | Description |
-|---|---|---|
-| `--user_model_path` | — | Path or name of the user model |
-| `--user_model_url` | — | vLLM base URL for the user model |
-| `--user_model_api_key` | `123` | API key for the user model |
-| `--assistant_model_path` | — | Path or name of the assistant model |
-| `--assistant_model_url` | — | vLLM base URL for the assistant model |
-| `--assistant_model_api_key` | `123` | API key for the assistant model |
-| `--retriever_model_path` | — | Path to the embedding model |
-| `--exp_setting` | `single_session` | Experiment setting: `single_session` or `long_horizon` |
-| `--n_events_per_sequence` | `10` | Number of life events simulated per user |
-| `--n_threads` | `4` | Number of parallel simulation threads |
-| `--chromadb_root` | `./chromadb` | Root directory for ChromaDB vector store |
-| `--logs_root` | `./logs` | Root directory for simulation logs |
-| `--seq_ids` | `None` | Comma-separated sequence IDs to run (default: all) |
-| `--use_preference_memory` | `False` | Enable assistant preference memory accumulation |
-
-**Output structure:**
-
-```
-logs/
-└── main_user_<user_model>_assistant_<assistant_model>_<setting>/
-    ├── logs_0/
-    │   ├── sim_log_<timestamp>.json        # Full dialogue + analysis log
-    │   ├── user_sim_log_<timestamp>.json   # User agent message history
-    │   └── assistant_sim_log_<timestamp>.json
-    ├── logs_1/
-    └── ...
-```
-
----
-
 ### 5. Evaluation
 
 Run `src/evaluation/eval.py` on the simulation logs. The evaluator uses an **LLM-as-a-judge** approach across 7 dimensions:
@@ -238,20 +139,6 @@ python src/evaluation/eval.py \
   --metrics     ir ic nat coh pa ea rr \
   --max_workers 32
 ```
-
-**Full argument reference:**
-
-| Argument | Default | Description |
-|---|---|---|
-| `--logs_root` | — | Root directory containing simulation logs |
-| `--themes` | — | One or more experiment folder names under `logs_root` |
-| `--output_root` | — | Directory to save evaluation results |
-| `--evaluator` | — | Evaluator model name or path |
-| `--base_url` | — | Base URL for the evaluator model (vLLM or proxy) |
-| `--api_key` | — | API key for the evaluator model |
-| `--model_path` | — | Override model ID sent to the endpoint |
-| `--metrics` | all | Subset of `ir ic nat coh pa ea rr` to compute |
-| `--max_workers` | `8` | Number of parallel evaluation workers |
 
 Results are saved as JSON files under `output_root`. For post-processing and score aggregation, see `src/evaluation/eval.ipynb`.
 
