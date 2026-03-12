@@ -12,9 +12,7 @@ This repository provides a research-oriented simulation framework for studying l
 
 ![LifeSim Framework](resources/framework.png)
 
-<video width="600" controls>
-  <source src="resources/lifesimDemo_with_subtitle.mov" type="video/mp4">
-</video>
+[LifeSim Demo Video](resources/lifesimDemo_with_subtitle.mov)
 
 ## 1. Research Objective
 
