@@ -117,7 +117,7 @@ python src/main_mp.py \
 
 ### 5. Evaluation
 
-Run `src/evaluation/eval.py` on the simulation logs. The evaluator uses an **LLM-as-a-judge** approach across 7 dimensions:
+Evaluation is a two-step pipeline using an **LLM-as-a-judge** approach across 7 dimensions:
 
 | Metric | Type | Description |
 |---|---|---|
@@ -129,18 +129,38 @@ Run `src/evaluation/eval.py` on the simulation logs. The evaluator uses an **LLM
 | `ea` | Environment Alignment | Scene/environment feasibility and constraint awareness (1–5) |
 | `rr` | Rigid Reasoning | Binary flag for failure to adapt after new constraints |
 
+#### Step 1 — Generate LLM judge outputs (`eval.py`)
+
+Run once per evaluator model. Results are saved under `{output_root}/{evaluator}/{theme}/`.
+
 ```bash
-python src/evaluation/eval.py \
-  --logs_root   ./logs \
-  --themes      main_user_Qwen3-32B_assistant_gpt-4o_long_horizon \
-  --output_root ./eval_outputs \
-  --evaluator   gpt-4o \
-  --api_key     your_openai_api_key \
-  --metrics     ir ic nat coh pa ea rr \
-  --max_workers 32
+for EVALUATOR in gpt-4o gpt-4o-mini; do
+  python src/evaluation/eval.py \
+    --logs_root   ./logs \
+    --themes      main_user_Qwen3-32B_assistant_gpt-4o_long_horizon \
+    --output_root ./eval_outputs/${EVALUATOR} \
+    --evaluator   ${EVALUATOR} \
+    --model_path  ${EVALUATOR} \
+    --api_key     your_openai_api_key \
+    --metrics     ir ic nat coh pa ea rr \
+    --max_workers 32
+done
 ```
 
-Results are saved as JSON files under `output_root`. For post-processing and score aggregation, see `src/evaluation/eval.ipynb`.
+#### Step 2 — Aggregate numeric scores (`metric.py`)
+
+Pass all evaluators to `--evaluators`; scores are averaged across them automatically.
+
+```bash
+python src/evaluation/metric.py \
+  --results_root ./eval_outputs \
+  --models       main_user_Qwen3-32B_assistant_gpt-4o_long_horizon \
+  --evaluators   gpt-4o qwen3_32b \
+  --metrics      ir ic nat coh pa ea rr \
+  --output_root  ./metric_outputs
+```
+
+Scores are printed to stdout and saved as `{output_root}/{model}/scores.json`.
 
 ---
 

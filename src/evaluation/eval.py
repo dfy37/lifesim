@@ -7,7 +7,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm.auto import tqdm
 
-from models.cloud import DeepSeek
+from models.cloud import DeepSeek, APIModel
 from models.vllm import VLLMModel, Qwen3API
 
 
@@ -99,6 +99,8 @@ def get_eval_dataset(theme, logs_root):
 # ---------------------------------------------------------------------------
 
 MODEL_CLASS_MAP = {
+    'gpt-4o':        APIModel,
+    'gpt-4o-mini':   APIModel,
     'gpt_oss_120b':  VLLMModel,
     'qwen3_32b':     Qwen3API,
     'llama3_70b':    VLLMModel,
@@ -109,9 +111,12 @@ MODEL_CLASS_MAP = {
 def build_model_factory(base_class, api_key, base_url=None, model_path=None):
     """Return a zero-argument callable that produces a ready-to-use model instance."""
     def factory():
-        instance = base_class(model=model_path, api_key=api_key, base_url=base_url) \
-            if base_url or model_path else base_class(api_key=api_key)
-        return instance
+        kwargs = {'api_key': api_key}
+        if model_path:
+            kwargs['model'] = model_path
+        if base_url:
+            kwargs['base_url'] = base_url
+        return base_class(**kwargs)
     return factory
 
 
@@ -619,7 +624,7 @@ def parse_args():
     parser.add_argument('--logs_root',   required=True, help='Root directory containing simulation log folders.')
     parser.add_argument('--themes',      nargs='+', required=True, help='Theme folder names under logs_root.')
     parser.add_argument('--output_root', required=True, help='Directory to save evaluation outputs.')
-    parser.add_argument('--evaluator',   choices=list(MODEL_CLASS_MAP), default='gpt_oss_120b')
+    parser.add_argument('--evaluator',   choices=list(MODEL_CLASS_MAP), default='qwen3_32b')
     parser.add_argument('--api_key',     default=os.getenv('OPENAI_API_KEY', '123'), help='API key for evaluator.')
     parser.add_argument('--base_url',    default=None, help='OpenAI-compatible base URL for evaluator.')
     parser.add_argument('--model_path',  required=True, help='Model path/name for evaluator.')
