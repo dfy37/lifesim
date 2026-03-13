@@ -96,19 +96,18 @@ An embedding model is required for the ChromaDB-based retrieval memory. We recom
 
 ### 4. Run Simulation
 
-Use `src/main_mp.py` as the main entrypoint. Run from the repository root:
+Use `src/main_mp.py` as the main entrypoint. All scripts are run from the **repository root** with `PYTHONPATH=src`.
 
 ```bash
-cd /path/to/lifesim
-
-python src/main_mp.py \
-  --user_model_path      /path/to/Qwen3-32B \
-  --user_model_url       http://0.0.0.0:8001/v1 \
-  --user_model_api_key   your_user_api_key \
-  --assistant_model_path gpt-4o \
-  --assistant_model_api_key your_openai_api_key \
+PYTHONPATH=src python src/main_mp.py \
+  --user_model_path      /path/to/User_Model \
+  --user_model_url       your_user_model_url \
+  --user_model_api_key   your_api_key \
+  --assistant_model_path /path/to/Assistant_Model \
+  --assistant_model_url  your_assistant_model_url \
+  --assistant_model_api_key your_api_key \
   --retriever_model_path /path/to/Qwen3-Embedding-0.6B \
-  --exp_setting          long_horizon \
+  --exp_setting          single_session \
   --n_events_per_sequence 10 \
   --n_threads            4 \
   --chromadb_root        ./chromadb \
@@ -131,17 +130,18 @@ Evaluation is a two-step pipeline using an **LLM-as-a-judge** approach across 7 
 
 #### Step 1 — Generate LLM judge outputs (`eval.py`)
 
-Run once per evaluator model. Results are saved under `{output_root}/{evaluator}/{theme}/`.
+Run once per evaluator model. Results are saved under `./eval_outputs/{evaluator}/{theme}/`.
 
 ```bash
-for EVALUATOR in gpt-4o gpt-4o-mini; do
-  python src/evaluation/eval.py \
+for EVALUATOR in qwen3_32b; do
+  PYTHONPATH=src python src/evaluation/eval.py \
     --logs_root   ./logs \
-    --themes      main_user_Qwen3-32B_assistant_gpt-4o_long_horizon \
+    --themes      main_user_Qwen3-32B_assistant_Qwen3-8B_total \
     --output_root ./eval_outputs/${EVALUATOR} \
     --evaluator   ${EVALUATOR} \
-    --model_path  ${EVALUATOR} \
-    --api_key     your_openai_api_key \
+    --model_path  /path/to/evaluator_model \
+    --base_url    http://0.0.0.0:8000/v1 \
+    --api_key     your_api_key \
     --metrics     ir ic nat coh pa ea rr \
     --max_workers 32
 done
@@ -152,10 +152,10 @@ done
 Pass all evaluators to `--evaluators`; scores are averaged across them automatically.
 
 ```bash
-python src/evaluation/metric.py \
+PYTHONPATH=src python src/evaluation/metric.py \
   --results_root ./eval_outputs \
-  --models       main_user_Qwen3-32B_assistant_gpt-4o_long_horizon \
-  --evaluators   gpt-4o qwen3_32b \
+  --models       main_user_Qwen3-32B_assistant_Qwen3-8B_total \
+  --evaluators   qwen3_32b \
   --metrics      ir ic nat coh pa ea rr \
   --output_root  ./metric_outputs
 ```
