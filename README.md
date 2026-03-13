@@ -153,56 +153,7 @@ The web demo provides an interactive UI for two usage modes:
 
 ### Step 1: Create `config.yaml`
 
-Create a `config.yaml` file in the directory from which you will run the server. A full annotated template:
-
-```yaml
-# Model configurations
-models:
-  user_model:
-    model_path: /path/to/Qwen3-32B   # local path or model name
-    base_url:   http://0.0.0.0:8001/v1
-    api_key:    your_api_key
-    vllmapi:    true                  # true = vLLM endpoint; false = unused
-
-  assistant_model:
-    model_path: gpt-4o
-    base_url:   ""                    # leave empty for official API endpoints
-    api_key:    your_openai_api_key
-    vllmapi:    false
-
-  analysis_model:                     # model used for churn/quality analysis
-    model_path: deepseek-chat
-    base_url:   ""
-    api_key:    your_deepseek_api_key
-    vllmapi:    false
-
-# Data paths
-paths:
-  events_path:     data/long_horizon/events.jsonl
-  users_path:      data/long_horizon/users.jsonl
-  preference_file: data/language_templates.json
-  event_pool_cfg:  null               # optional: path to event pool config JSON
-                                      # required only for Free Chat online event generation
-
-# Retrieval memory (ChromaDB + embedding model)
-retriever:
-  embedding_model_path: /path/to/Qwen3-Embedding-0.6B
-  max_length:           512
-  embedding_dim:        1024
-  persist_directory:    ./chromadb
-  device:               cpu           # or "cuda:0"
-  logger_silent:        true
-
-# Simulator hyperparameters
-simulator:
-  alpha: 0.5                          # memory perception coefficient in user agent
-
-# Assistant models available in the web UI dropdown
-assistant_models:
-  - gpt-4o
-  - gpt-4o-mini
-  - deepseek-chat
-```
+Create a `config.yaml` file in the directory from which you will run the server. A full annotated template is provided at [`src/config_template.yaml`](src/config_template.yaml) — copy it and fill in your paths, API keys, and model settings.
 
 ### Step 2: Launch the Server
 
@@ -214,26 +165,18 @@ python flask_app.py --config /path/to/config.yaml --port 5010
 
 Then open `http://localhost:5010` in your browser.
 
-**CLI options:**
-
-| Argument | Default | Description |
-|---|---|---|
-| `--config`, `-c` | `config.yaml` | Path to the YAML configuration file |
-| `--host` | `0.0.0.0` | Host address to bind |
-| `--port`, `-p` | `5010` | Port to listen on |
-| `--debug` | `False` | Enable Flask debug mode |
-
----
-
 ## Citation
 
 If you use LifeSim or LifeSim-Eval in your research, please cite:
 
 ```bibtex
-@article{lifesim2025,
-  title   = {LifeSim: Long-Horizon User Life Simulator for Personalized Assistant Evaluation},
-  author  = {},
-  journal = {},
-  year    = {2025}
+@misc{duan2026lifesimlonghorizonuserlife,
+  title={LifeSim: Long-Horizon User Life Simulator for Personalized Assistant Evaluation}, 
+  author={Feiyu Duan and Xuanjing Huang and Zhongyu Wei},
+  year={2026},
+  eprint={2603.12152},
+  archivePrefix={arXiv},
+  primaryClass={cs.CL},
+  url={https://arxiv.org/abs/2603.12152}, 
 }
 ```

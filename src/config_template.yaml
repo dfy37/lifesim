@@ -1,0 +1,35 @@
+experiment:
+  name: default_exp
+
+models:
+  user_model:
+    model_path: "YOUR_MODEL_NAME"
+    api_key: "YOUR_API_KEY"
+    base_url: "YOUR_BASE_URL"
+    vllmapi: true
+  assistant_model:
+    model_path: "YOUR_MODEL_NAME"
+    api_key: "YOUR_API_KEY"
+    base_url: "YOUR_BASE_URL"
+    vllmapi: true
+  analysis_model:
+    model_path: "YOUR_MODEL_NAME"
+    api_key: "YOUR_API_KEY"
+    base_url: "YOUR_BASE_URL"
+    vllmapi: true
+
+retriever:
+  embedding_model_path: "/path/to/embedding/model"
+  max_length: 512
+  embedding_dim: 1024
+  persist_directory: "/path/to/chroma_db_storage"
+  device: "cuda:0"
+  logger_silent: false
+
+paths:
+  events_path: "/path/to/data/events.jsonl"
+  users_path: "/path/to/data/users.jsonl"
+  preference_file: "/path/to/data/language_templates.json"
+
+simulator:
+  alpha: 0.5
