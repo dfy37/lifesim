@@ -154,9 +154,8 @@ def format_preferences(pdims: List[Dict], golds: List[Dict]) -> List[Dict]:
     
     return formatted_pred
 
-def preferences2str(preferences: List[Dict]) -> str:
-    profile_template = json.load(open('/inspire/hdd/project/socialsimulation/linjiayu-CZXS25120090/FYDUAN/data/language_templates.json'))
-    profile_template_dic = {x['dimension']: x for x in profile_template}
+def preferences2str(preferences: List[Dict], template: List[Dict]) -> str:
+    profile_template_dic = {x['dimension']: x for x in template}
 
     preferences_str = ''
     for d in preferences:

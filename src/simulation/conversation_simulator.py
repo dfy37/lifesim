@@ -226,24 +226,32 @@ class ConversationSimulator:
         # --- Optional: dropout analysis ---
         strategy = ''
         if self.analysis_agent:
-            formatted_event = POI_Event.from_dict(event)
-            dropout_result = self.analysis_agent.predict_dropout(
-                conversation_context=episode_log['dialogue'],
-                user_profile=str(self.user_profile),
-                event=formatted_event.desc(),
-                intents=event['sub_intents'],
-            )
-            self.logger.info(
-                f"[Dropout analysis] Risk: {dropout_result['risk']}\n"
-                f"Reason: {dropout_result['reason']}\n"
-                f"Strategy: {dropout_result['strategy']}"
-            )
-            strategy = dropout_result.get('strategy', '')
-            episode_log = self.update_interface_dropout(
-                result=dropout_result,
-                episode_log=episode_log,
-                round_index=round_index,
-            )
+            try:
+                formatted_event = POI_Event.from_dict(event)
+                dropout_result = self.analysis_agent.predict_dropout(
+                    conversation_context=episode_log['dialogue'],
+                    user_profile=str(self.user_profile),
+                    event=formatted_event.desc(),
+                    intents=event.get('sub_intents', []),
+                )
+                self.logger.info(
+                    f"[Dropout analysis] Risk: {dropout_result['risk']}\n"
+                    f"Reason: {dropout_result['reason']}\n"
+                    f"Strategy: {dropout_result['strategy']}"
+                )
+                strategy = dropout_result.get('strategy', '')
+                episode_log = self.update_interface_dropout(
+                    result=dropout_result,
+                    episode_log=episode_log,
+                    round_index=round_index,
+                )
+            except Exception:
+                self.logger.exception("[Dropout analysis] Failed to analyze dropout")
+                episode_log = self.update_interface_dropout(
+                    result={'risk': 'Unknown', 'reason': 'Analysis failed.', 'strategy': ''},
+                    episode_log=episode_log,
+                    round_index=round_index,
+                )
 
         self.dialogue_log.append(episode_log)
         return episode_log, strategy

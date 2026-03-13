@@ -171,7 +171,7 @@ class AssistantAgent:
         reply = parse_json_dict_response(reply, [])
 
         self.user_preferences = format_preferences(reply, self.user_profile.preferences_value)
-        self.user_preferences_str = preferences2str(self.user_preferences)
+        self.user_preferences_str = preferences2str(self.user_preferences, self.dimensions_template)
         self.logger.info(f"[✓] Updated user profile preferences:\n{str(self.user_preferences)}")
 
         return self.user_preferences
