@@ -4,6 +4,8 @@ The rapid advancement of large language models (LLMs) has accelerated progress t
 
 To bridge this gap, we propose **LifeSim**, a user simulator that models user cognition through the Belief-Desire-Intention (BDI) model within physical environments for coherent life trajectories generation, and simulates intention-driven user interactive behaviors. Based on LifeSim, we introduce **LifeSim-Eval**, a comprehensive benchmark for multi-scenario, long-horizon personalized assistance.
 
+![LifeSim Framework](resources/framework.png)
+
 [![LifeSim Demo](https://img.youtube.com/vi/DFGOuH7bzzI/maxresdefault.jpg)](https://youtu.be/DFGOuH7bzzI)
 
 ---
