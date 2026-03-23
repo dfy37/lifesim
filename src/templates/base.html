@@ -21,14 +21,14 @@
     <!-- Navbar -->
     <nav class="navbar">
         <div class="container">
-            <a href="/" class="navbar-brand">
+            <a href="{{ url_for('index') }}" class="navbar-brand">
                 <div class="logo">LS</div>
                 <span>LifeSim</span>
             </a>
             <ul class="navbar-nav">
-                <li><a href="/" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">Home</a></li>
-                <li><a href="/assistant-eval" class="nav-link {% if request.endpoint == 'assistant_eval' %}active{% endif %}">Assistant Eval</a></li>
-                <li><a href="/user-life" class="nav-link {% if request.endpoint == 'user_life' %}active{% endif %}">Free Chat</a></li>
+                <li><a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">Home</a></li>
+                <li><a href="{{ url_for('assistant_eval') }}" class="nav-link {% if request.endpoint == 'assistant_eval' %}active{% endif %}">Assistant Eval</a></li>
+                <li><a href="{{ url_for('user_life') }}" class="nav-link {% if request.endpoint == 'user_life' %}active{% endif %}">Free Chat</a></li>
             </ul>
         </div>
     </nav>
@@ -42,6 +42,15 @@
     </main>
 
     <!-- Custom JS -->
+    <script>
+        window.LIFESIM_BASE = {{ request.script_root|tojson }};
+        window.lifesimUrl = function(path) {
+            const base = window.LIFESIM_BASE || '';
+            if (!path) return base || '/';
+            if (/^https?:\/\//.test(path)) return path;
+            return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+        };
+    </script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block extra_js %}{% endblock %}
 </body>

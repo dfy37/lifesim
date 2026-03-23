@@ -14,6 +14,7 @@ from datetime import datetime
 
 from flask import Flask, render_template, request, jsonify, session, Response
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from utils.utils import get_logger
 
@@ -23,6 +24,7 @@ CONFIG_PATH = "config.yaml"
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 CORS(app)
 
 # In-memory session storage (use Redis or a database in production)
@@ -91,7 +93,7 @@ def assistant_eval():
         default_user = uid2user.get(seqid2uid.get(default_seq_id)) if default_seq_id else None
         default_events = seqid2eseq.get(default_seq_id, {}).get('events', []) if default_seq_id else []
 
-        assistant_models = cfg.get("assistant_models", ['deepseek-chat'])
+        assistant_models = cfg.get("assistant_models", ['gpt-4o-mini'])
 
         return render_template('assistant_eval.html',
                                sequence_ids=sequence_ids,
@@ -107,7 +109,7 @@ def assistant_eval():
                                selected_seq_id=None,
                                user_profile=None,
                                event_sequence=[],
-                               assistant_models=['deepseek-chat'],
+                               assistant_models=['gpt-4o-mini'],
                                simulation_results=[])
 
 
@@ -189,7 +191,7 @@ def save_profile():
 def stream_simulation():
     """Stream assistant evaluation simulation results via Server-Sent Events."""
     sequence_id = request.args.get('sequence_id')
-    assistant_model = request.args.get('assistant_model', 'deepseek-chat')
+    assistant_model = request.args.get('assistant_model', 'gpt-4o-mini')
     n_events = int(request.args.get('n_events', 2))
     n_rounds = int(request.args.get('n_rounds', 4))
 

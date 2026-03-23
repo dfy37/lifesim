@@ -13,7 +13,7 @@
     <!-- Mode Selection -->
     <div class="grid grid-2" style="max-width: 900px; margin: 0 auto;">
         <!-- Assistant Evaluation Mode -->
-        <a href="/assistant-eval" class="mode-card" style="text-decoration: none;">
+        <a href="{{ url_for('assistant_eval') }}" class="mode-card" style="text-decoration: none;">
             <div class="icon">
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary-color);">
                     <path d="M12 2L2 7l10 5 10-5-10-5z"/>
@@ -27,7 +27,7 @@
         </a>
 
         <!-- Free Chat Mode -->
-        <a href="/user-life" class="mode-card" style="text-decoration: none;">
+        <a href="{{ url_for('user_life') }}" class="mode-card" style="text-decoration: none;">
             <div class="icon">
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--secondary-color);">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
