@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}LifeSim — Long-horizon User Life Simulator{% endblock %}
+
+{% block content %}
+<div style="overflow-y: auto; height: calc(100vh - 56px);">
+<div class="container">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-eyebrow" data-i18n="idx.eyebrow">Research Demo · Fudan DISC</div>
+    <h1 data-i18n-html="idx.h1">Long-horizon User<br>Life Simulator</h1>
+    <p data-i18n="idx.desc">LifeSim generates coherent long-horizon life trajectories for users, modeling cognitive states (intent + motivation) at each node to capture behavioral variation across contexts.</p>
+    <div class="hero-cta">
+      <a href="{{ url_for('live') }}" class="btn btn-primary btn-lg">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        <span data-i18n="nav.live">Live Generation</span>
+      </a>
+      <a href="{{ url_for('trajectory') }}" class="btn btn-secondary btn-lg">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        <span data-i18n="nav.preset">Preset Demo</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section style="margin-bottom: 48px;">
+    <h2 style="font-size:20px; margin-bottom:20px;" data-i18n="idx.features">Key Features</h2>
+    <div class="grid grid-3">
+
+      <div class="card">
+        <div class="card-body">
+          <div class="feature-icon" style="background:var(--purple-soft); color:var(--purple);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+            </svg>
+          </div>
+          <h4 style="font-size:14px; margin-bottom:6px;" data-i18n="idx.f1_title">Long-horizon Trajectory Generation</h4>
+          <p style="font-size:12px; color:var(--text-muted); line-height:1.6;" data-i18n="idx.f1_desc">
+            Generates coherent life event sequences spanning multiple domains, with each node carrying full temporal, spatial, and weather context.
+          </p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <div class="feature-icon" style="background:var(--green-soft); color:var(--green);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            </svg>
+          </div>
+          <h4 style="font-size:14px; margin-bottom:6px;" data-i18n="idx.f2_title">BDI Cognitive State Modeling</h4>
+          <p style="font-size:12px; color:var(--text-muted); line-height:1.6;" data-i18n="idx.f2_desc">
+            Each node carries explicit intents and implicit needs, driving differentiated interaction behavior via the Belief-Desire-Intention model.
+          </p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <div class="feature-icon" style="background:rgba(245,158,11,0.1); color:#d97706;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </div>
+          <h4 style="font-size:14px; margin-bottom:6px;" data-i18n="idx.f3_title">Node-driven Interaction</h4>
+          <p style="font-size:12px; color:var(--text-muted); line-height:1.6;" data-i18n="idx.f3_desc">
+            Select any node to chat with the user in that cognitive state. Switch nodes to compare behavioral differences across contexts.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section style="margin-bottom: 60px;">
+    <h2 style="font-size:20px; margin-bottom:20px;" data-i18n="idx.how">How It Works</h2>
+    <div class="card" style="max-width:640px;">
+      <div class="card-body">
+        <div class="steps-list">
+          <div class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <div class="step-title" data-i18n="idx.s1_title">Select a trajectory</div>
+              <div class="step-desc"  data-i18n="idx.s1_desc">Choose a preset sequence from the sidebar — the map instantly renders the full trajectory and user profile.</div>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <div class="step-title" data-i18n="idx.s2_title">Browse the map</div>
+              <div class="step-desc"  data-i18n="idx.s2_desc">Follow the user's movement path; semi-transparent dashed lines connect each life node.</div>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <div class="step-title" data-i18n="idx.s3_title">Click a node to inspect cognitive state</div>
+              <div class="step-desc"  data-i18n="idx.s3_desc">A detail drawer slides in showing the event description, explicit intents, and implicit needs.</div>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <div class="step-title" data-i18n="idx.s4_title">Chat with the user at that moment</div>
+              <div class="step-desc"  data-i18n="idx.s4_desc">Click "Talk to User" to interact with the user in that cognitive state. Switch nodes to contrast behaviors.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</div>
+{% endblock %}

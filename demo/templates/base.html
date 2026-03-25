@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}LifeSim Demo{% endblock %}</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="{{ url_for('index') }}" class="navbar-brand">
+      <div class="logo">LS</div>
+      <span>LifeSim</span>
+    </a>
+    <ul class="navbar-nav">
+      <li><a href="{{ url_for('index') }}"      class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" data-i18n="nav.home">Home</a></li>
+      <li><a href="{{ url_for('live') }}"       class="nav-link {% if request.endpoint == 'live' %}active{% endif %}" data-i18n="nav.live">Live Generation</a></li>
+      <li><a href="{{ url_for('trajectory') }}" class="nav-link {% if request.endpoint == 'trajectory' %}active{% endif %}" data-i18n="nav.preset">Preset Demo</a></li>
+    </ul>
+    <div class="navbar-spacer"></div>
+    <button id="lang-toggle" class="lang-toggle-btn">中文</button>
+  </nav>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  {% block content %}{% endblock %}
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

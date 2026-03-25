@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Live Generation — LifeSim{% endblock %}
+
+{% block content %}
+<div class="demo-root">
+  <div class="workspace">
+
+    <!-- ══ Left Sidebar ══ -->
+    <aside class="sim-sidebar">
+      <div class="sidebar-scroll">
+
+        <!-- Sequence selector -->
+        <div class="sb-section">
+          <div class="sb-section-title" data-i18n="sb.user">User</div>
+          <div class="form-row">
+            <select id="sequence-select" class="form-control">
+              <option value="" data-i18n="live.select_user">— select a user —</option>
+              {% for seq_id in sequence_ids %}
+              <option value="{{ seq_id }}">{{ user_names.get(seq_id, seq_id) }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div id="seq-meta" class="seq-meta" style="margin-top:4px;"></div>
+        </div>
+
+        <!-- User profile -->
+        <div class="sb-section">
+          <div class="sb-section-title" style="display:flex;align-items:center;justify-content:space-between;">
+            <span><span data-i18n="sb.profile">User Profile</span> <span id="profile-edited-badge" class="profile-edited-badge hidden" data-i18n="sb.edited">edited</span></span>
+            <button id="btn-edit-profile" class="btn-edit-icon" title="Edit profile">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+          </div>
+          <div id="profile-demo" style="font-size:12px; color:var(--text-muted);" data-i18n="live.select_begin">Select a sequence to begin</div>
+        </div>
+
+        <!-- Generation log terminal -->
+        <div class="sb-section" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+          <div class="sb-section-title" data-i18n="live.gen_log">Generation Log</div>
+          <div class="live-terminal" id="live-terminal">
+            <div class="live-terminal-body" id="live-terminal-body">
+              <span class="live-terminal-empty" data-i18n="live.waiting">Waiting for generation…</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom: generate button + progress + reset -->
+      <div style="padding:14px 18px; border-top:1px solid var(--border); flex-shrink:0;">
+        <button id="generate-btn" class="btn btn-primary btn-sm btn-block generate-btn" disabled>
+          <svg id="generate-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          <span id="generate-label" data-i18n="live.gen_btn">Generate Next Event</span>
+        </button>
+        <div id="live-progress" class="live-progress hidden">
+          <div class="live-progress-bar">
+            <div id="live-progress-fill" class="live-progress-fill" style="width:0%"></div>
+          </div>
+          <div id="live-progress-text" class="live-progress-text">0 / 0 events</div>
+        </div>
+        <button id="clear-btn" class="btn btn-secondary btn-sm btn-block" style="margin-top:8px;" data-i18n="sb.reset">Reset Session</button>
+      </div>
+    </aside>
+
+    <!-- ══ Map Area ══ -->
+    <main class="map-area" id="map-area">
+
+      <!-- Map canvas -->
+      <div id="map" class="map-canvas"></div>
+
+      <!-- Empty state -->
+      <div id="map-empty" class="map-empty">
+        <div class="map-empty-icon">⚡</div>
+        <div class="map-empty-title" data-i18n="live.empty_title">Live Generation Mode</div>
+        <div class="map-empty-sub"   data-i18n="live.empty_sub">Select a sequence and click Generate Next Event</div>
+      </div>
+
+      <!-- Node info overlay (top-left) -->
+      <div id="node-overlay" class="node-overlay">
+        <div class="ov-row">
+          <span class="ov-label" data-i18n="ov.user">User</span>
+          <span class="ov-val" id="ov-seq">—</span>
+        </div>
+        <div class="ov-row">
+          <span class="ov-label" data-i18n="ov.theme">Theme</span>
+          <span class="ov-val" id="ov-theme">—</span>
+        </div>
+        <div class="ov-row">
+          <span class="ov-label" data-i18n="live.events_lbl">Events</span>
+          <span class="ov-val" id="ov-nodes">—</span>
+        </div>
+      </div>
+
+      <!-- Node detail drawer -->
+      <div id="node-drawer" class="node-drawer">
+
+        <!-- Drawer header -->
+        <div class="drawer-header">
+          <div id="drawer-badge" class="drawer-node-badge">1</div>
+          <div class="drawer-titles">
+            <div id="drawer-title" class="drawer-node-title">Node 1</div>
+            <div id="drawer-sub"   class="drawer-node-sub">—</div>
+          </div>
+          <button class="drawer-close" id="drawer-close">×</button>
+        </div>
+
+        <!-- Drawer details (scrollable) -->
+        <div id="drawer-details" class="drawer-details">
+
+          <div class="drawer-section-title" data-i18n="dr.nodeinfo">Node Info</div>
+          <div id="node-meta" class="node-meta"></div>
+
+          <div class="drawer-section-title" data-i18n="dr.happened">What Happened</div>
+          <div id="event-card" class="event-card"></div>
+
+          <div class="drawer-section-title" data-i18n="dr.cognitive">Cognitive State</div>
+          <div id="motivation-grid" class="motivation-grid"></div>
+
+        </div>
+
+      </div><!-- /node-drawer -->
+
+      <!-- Floating chat button (bottom-right, shown when node selected) -->
+      <div id="chat-fab" class="chat-fab hidden">
+        <button id="btn-open-chat" class="chat-fab-btn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span data-i18n="chat.talk">Talk to User</span>
+        </button>
+      </div>
+
+      <!-- Floating chat modal (centered over map) -->
+      <div id="chat-modal" class="chat-modal hidden">
+        <div class="chat-modal-panel">
+          <div class="chat-modal-header">
+            <span class="chat-modal-title" id="chat-modal-title" data-i18n="chat.title">Conversation</span>
+            <button id="btn-close-chat" class="chat-modal-close">×</button>
+          </div>
+          <div id="chat-messages" class="chat-messages">
+            <div class="chat-empty-state" data-i18n="chat.empty">No messages yet</div>
+          </div>
+          <div class="chat-input-area">
+            <div class="chat-input-row">
+              <textarea id="chat-input" class="chat-input" rows="2"
+                placeholder="Send a message…" data-i18n-ph="chat.ph"></textarea>
+              <button id="send-btn" class="btn btn-primary btn-sm">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </button>
+            </div>
+            <div class="chat-hint" data-i18n="chat.hint">Ctrl+Enter to send</div>
+          </div>
+        </div>
+      </div>
+
+    </main><!-- /map-area -->
+
+  </div>
+</div>
+
+<!-- Profile edit modal (fixed, covers full screen) -->
+<div id="profile-edit-modal" class="profile-edit-modal hidden">
+  <div class="profile-edit-panel">
+    <div class="profile-edit-header">
+      <span class="profile-edit-title" data-i18n="pe.title">Edit User Profile</span>
+      <button id="btn-close-profile-edit" class="chat-modal-close">×</button>
+    </div>
+    <div class="profile-edit-body">
+      <div class="pe-grid">
+        <div class="pe-field">
+          <label class="pe-label" for="pe-gender" data-i18n="pe.gender">Gender</label>
+          <input type="text" id="pe-gender" class="pe-input" placeholder="e.g. Female">
+        </div>
+        <div class="pe-field">
+          <label class="pe-label" for="pe-age" data-i18n="pe.age">Age</label>
+          <input type="text" id="pe-age" class="pe-input" placeholder="e.g. 32">
+        </div>
+        <div class="pe-field">
+          <label class="pe-label" for="pe-area" data-i18n="pe.area">Area</label>
+          <input type="text" id="pe-area" class="pe-input" placeholder="e.g. Shanghai">
+        </div>
+        <div class="pe-field">
+          <label class="pe-label" for="pe-employment" data-i18n="pe.employment">Employment</label>
+          <input type="text" id="pe-employment" class="pe-input" placeholder="e.g. Full-time">
+        </div>
+        <div class="pe-field">
+          <label class="pe-label" for="pe-income" data-i18n="pe.income">Income</label>
+          <input type="text" id="pe-income" class="pe-input" placeholder="e.g. Middle">
+        </div>
+        <div class="pe-field">
+          <label class="pe-label" for="pe-marital" data-i18n="pe.marital">Marital</label>
+          <input type="text" id="pe-marital" class="pe-input" placeholder="e.g. Married">
+        </div>
+      </div>
+      <div class="pe-field">
+        <label class="pe-label" for="pe-personality">
+          <span data-i18n="pe.personality">Personality</span>
+          <span class="pe-hint" data-i18n="pe.per_hint">— one trait per line</span>
+        </label>
+        <textarea id="pe-personality" class="pe-textarea" rows="4" placeholder="Conscientious&#10;Empathetic&#10;..."></textarea>
+      </div>
+      <div class="pe-field" style="margin-top:12px;">
+        <label class="pe-label" for="pe-preferences">
+          <span data-i18n="pe.prefs">Preferences</span>
+          <span class="pe-hint" data-i18n="pe.prefs_hint">— one item per line</span>
+        </label>
+        <textarea id="pe-preferences" class="pe-textarea" rows="4" placeholder="Prefers quiet environments&#10;..."></textarea>
+      </div>
+    </div>
+    <div class="profile-edit-footer">
+      <button id="btn-reset-profile" class="btn btn-secondary btn-sm" data-i18n="pe.reset">Reset to Original</button>
+      <div style="display:flex;gap:8px;">
+        <button id="btn-cancel-profile-edit" class="btn btn-secondary btn-sm" data-i18n="pe.cancel">Cancel</button>
+        <button id="btn-save-profile" class="btn btn-primary btn-sm" data-i18n="pe.save">Save & Apply</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>window.__USER_NAMES__ = {{ user_names | tojson }};</script>
+<script src="{{ url_for('static', filename='js/live.js') }}"></script>
+{% endblock %}

@@ -267,7 +267,7 @@ class OnlineLifeEventEngine:
         )
         response = self.model.chat([{'role': 'user', 'content': prompt}])
         response = parse_json_dict_response(response, keys=['ranked_events', 'has_possible_event'])
-        self.logger.info(f"Rerank response: {response}")
+        # self.logger.info(f"Rerank response: {response}")
         try:
             has_possible_event = response.get('has_possible_event', 'false')
             if isinstance(has_possible_event, str):
@@ -275,7 +275,7 @@ class OnlineLifeEventEngine:
             elif not isinstance(has_possible_event, bool):
                 has_possible_event = False
             if not has_possible_event:
-                return []
+                return [0]
             rank_indices = [int(i) - 1 for i in response.get('ranked_events', [])]
             return [events[i] for i in rank_indices if 0 <= i < len(events)][:n_keep]
         except Exception:

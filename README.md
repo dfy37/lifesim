@@ -170,22 +170,26 @@ Scores are printed to stdout and saved as `{output_root}/{model}/scores.json`.
 
 The web demo provides an interactive UI for two usage modes:
 
-- **Assistant Evaluation Mode** — runs automated multi-event simulations and displays real-time conversation streams, event timelines, and churn analysis.
-- **Free Chat Mode** — dynamically generates life events and lets you interact directly with the simulated user.
+- **Live Generation** — dynamically generates life events driven by the BDI model and lets you interact directly with the simulated user in real time.
+- **Preset Demo** — replays pre-generated trajectory data with an animated map timeline; click any node to view event details and chat with the simulated user.
 
 ### Step 1: Create `config.yaml`
 
-Create a `config.yaml` file in the directory from which you will run the server. A full annotated template is provided at [`src/config_template.yaml`](src/config_template.yaml) — copy it and fill in your paths, API keys, and model settings.
+A full annotated template is provided at [`demo/config_template.yaml`](demo/config_template.yaml). Copy it and fill in your model paths, API keys, and retriever settings. The config is only required for the **Live Generation** mode (real-time user-model chat); the **Preset Demo** mode works without it.
 
 ### Step 2: Launch the Server
 
 ```bash
-cd /path/to/lifesim/src
+cd /path/to/lifesim/demo
 
-python flask_app.py --config /path/to/config.yaml --port 5010
+python app.py \
+  --events-path /path/to/data/single_session/events.jsonl \
+  --users-path  /path/to/data/single_session/users.jsonl \
+  --config      /path/to/config.yaml \
+  --port        5020
 ```
 
-Then open `http://localhost:5010` in your browser.
+Then open `http://localhost:5020` in your browser.
 
 ## Citation
 
