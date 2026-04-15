@@ -68,7 +68,6 @@ const drawerSub          = $('drawer-sub');
 const drawerClose        = $('drawer-close');
 const nodeMeta           = $('node-meta');
 const eventCard          = $('event-card');
-const motivGrid          = $('motivation-grid');
 const chatFab            = $('chat-fab');
 const btnOpenChat        = $('btn-open-chat');
 const chatModal          = $('chat-modal');
@@ -522,9 +521,6 @@ function openDrawer(node) {
   nodeDrawer.classList.add('open');
   chatFab.classList.remove('hidden');
 
-  const explicit = (node.motivation && node.motivation.explicit) || [];
-  const implicit = (node.motivation && node.motivation.implicit) || [];
-
   nodeMeta.innerHTML = `
     ${mrow(t('ov.time'), node.time)}
     ${mrow(t('dr.location'), node.location)}
@@ -534,28 +530,6 @@ function openDrawer(node) {
 
   eventCard.textContent = node.event || node.life_event || 'Generating…';
   eventCard.style.borderLeftColor = color.fill;
-
-  motivGrid.innerHTML = `
-    <div class="motivation-block mb-explicit">
-      <div class="motivation-block-title">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-        ${t('dr.explicit')}
-      </div>
-      ${motivList(explicit)}
-    </div>
-    <div class="motivation-block mb-implicit">
-      <div class="motivation-block-title">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
-          <line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>
-        </svg>
-        ${t('dr.implicit')}
-      </div>
-      ${motivList(implicit)}
-    </div>
-  `;
 }
 
 function closeDrawer() {
@@ -574,10 +548,6 @@ function mrow(label, value) {
   return `<span class="node-meta-label">${label}</span><span class="node-meta-value">${esc(value)}</span>`;
 }
 
-function motivList(items) {
-  if (!items.length) return `<div class="motivation-empty">${t('dr.none')}</div>`;
-  return `<ul class="motivation-list">${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`;
-}
 
 /* ---- Chat modal ---- */
 function openChatModal() {

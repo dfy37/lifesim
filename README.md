@@ -6,7 +6,7 @@ To bridge this gap, we propose **LifeSim**, a user simulator that models user co
 
 ![LifeSim Framework](resources/framework.png)
 
-[![LifeSim Demo](https://img.youtube.com/vi/DFGOuH7bzzI/maxresdefault.jpg)](https://youtu.be/DFGOuH7bzzI)
+[![LifeSim Demo](https://img.youtube.com/vi/8oeR6LS8ISQ/maxresdefault.jpg)](https://youtu.be/8oeR6LS8ISQ)
 
 ---
 
